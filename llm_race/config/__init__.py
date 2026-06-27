@@ -20,6 +20,9 @@ DEFAULT_TEMPERATURE = 0.0
 DEFAULT_TOP_P = 1.0
 DEFAULT_REQUEST_TIMEOUT = 120
 
+WEB_PORT = int(os.environ.get("LLM_RACE_WEB_PORT", "8080"))
+WEB_HOST = os.environ.get("LLM_RACE_WEB_HOST", "127.0.0.1")
+
 
 def create_provider(provider_type: str, **kwargs: Any) -> Provider:
     """Build a provider by type name.
