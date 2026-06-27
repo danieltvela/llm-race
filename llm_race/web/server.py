@@ -31,6 +31,15 @@ from llm_race.db.queries import list_benchmarks, compare_runs, timeseries
 
 logger = logging.getLogger(__name__)
 
+
+def _fmt(val: float | int | None) -> str:
+    if val is None:
+        return ""
+    if isinstance(val, float):
+        return f"{val:.2f}"
+    return str(val)
+
+
 HERE = Path(__file__).parent
 TEMPLATES_DIR = HERE / "templates"
 STATIC_DIR = HERE / "static"
@@ -355,7 +364,66 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             self._send_html(html)
 
     def handle_csv_export(self, params: dict[str, list[str]]) -> None:
-        self._send_501()
+        import csv
+        import io
+
+        run_id = params.get("run_id", [None])[0]
+
+        with _get_db_session() as session:
+            if run_id:
+                rows = compare_runs(session, [run_id])
+            else:
+                result = list_benchmarks(session, filters=None, offset=0, limit=10000)
+                rows = result.items
+
+            output = io.StringIO()
+            writer = csv.writer(output)
+
+            writer.writerow([
+                "run_id", "model_name", "provider_name", "hostname",
+                "workload_profile", "prompt_size", "concurrency",
+                "started_at", "completed_at", "wall_clock_seconds",
+                "total_requests", "successful_requests", "failed_requests",
+                "throughput_tps", "tokens_per_second",
+                "e2e_mean_ms", "e2e_p50_ms", "e2e_p90_ms", "e2e_p99_ms",
+                "ttft_mean_ms", "itl_mean_ms", "total_tokens", "status",
+            ])
+
+            for r in rows:
+                writer.writerow([
+                    r.run_id,
+                    r.model_name,
+                    r.provider_name,
+                    r.hostname,
+                    r.workload_profile,
+                    r.prompt_size,
+                    r.concurrency,
+                    r.started_at.isoformat() if hasattr(r, "started_at") and r.started_at else "",
+                    r.completed_at.isoformat() if hasattr(r, "completed_at") and r.completed_at else "",
+                    r.wall_clock_seconds if hasattr(r, "wall_clock_seconds") else "",
+                    r.total_requests if hasattr(r, "total_requests") else "",
+                    r.successful_requests if hasattr(r, "successful_requests") else "",
+                    r.failed_requests if hasattr(r, "failed_requests") else "",
+                    _fmt(r.throughput_tps),
+                    _fmt(getattr(r, "tokens_per_second", None)),
+                    _fmt(r.e2e_mean_ms),
+                    _fmt(getattr(r, "e2e_p50_ms", None)),
+                    _fmt(getattr(r, "e2e_p90_ms", None)),
+                    _fmt(getattr(r, "e2e_p99_ms", None)),
+                    _fmt(getattr(r, "ttft_mean_ms", None)),
+                    _fmt(getattr(r, "itl_mean_ms", None)),
+                    getattr(r, "total_tokens", ""),
+                    getattr(r, "status", ""),
+                ])
+
+            csv_content = output.getvalue()
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/csv; charset=utf-8")
+        self.send_header("Content-Disposition", 'attachment; filename="benchmarks.csv"')
+        self.send_header("Content-Length", str(len(csv_content.encode("utf-8"))))
+        self.end_headers()
+        self.wfile.write(csv_content.encode("utf-8"))
 
     def _send_501(self) -> None:
         self.send_response(501)

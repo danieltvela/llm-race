@@ -123,10 +123,34 @@ def test_timeseries_empty_state(server) -> None:
     assert (b"No data" in body or b"data" in body.lower() or b"timeseries" in body.lower() or b"canvas" in body)
 
 
-def test_csv_export_route_returns_501(server) -> None:
-    """GET /export/csv should return 501 (stub)."""
+def test_csv_export_returns_200(server) -> None:
+    """GET /export/csv should return 200 (real implementation)."""
     status, body, headers = _get("/export/csv")
-    assert status == 501
+    assert status == 200
+
+
+def test_csv_export_content_type(server) -> None:
+    """CSV export should have text/csv content type."""
+    status, body, headers = _get("/export/csv")
+    assert status == 200
+    ct = headers.get("Content-Type", "")
+    assert "text/csv" in ct or "csv" in ct
+
+
+def test_csv_export_content_disposition(server) -> None:
+    """CSV export should have Content-Disposition header."""
+    status, body, headers = _get("/export/csv")
+    assert status == 200
+    cd = headers.get("Content-Disposition", "")
+    assert "attachment" in cd or "filename" in cd or "benchmarks.csv" in cd
+
+
+def test_csv_export_contains_headers(server) -> None:
+    """CSV export should contain header row with expected fields."""
+    status, body, headers = _get("/export/csv")
+    assert status == 200
+    assert b"run_id" in body
+    assert b"model_name" in body
 
 
 def test_index_returns_html(server) -> None:
