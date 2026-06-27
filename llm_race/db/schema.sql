@@ -1,0 +1,2 @@
+-- Raw SQLite schema for reference.
+-- Will be filled when the DB layer is built.

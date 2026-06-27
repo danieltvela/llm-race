@@ -34,3 +34,9 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Benchmark outputs
+vllm_benchmark_*.csv
+vllm_benchmark_*.json
+llm_race_benchmark_*.csv
+llm_race_benchmark_*.json
