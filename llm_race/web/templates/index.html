@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Benchmarks — LLM Race{% endblock %}
+{% block content %}
+<h1>Benchmarks</h1>
+
+<form method="GET" action="/" class="filter-form">
+    <div class="filter-group">
+        <label for="model_name">Model</label>
+        <input type="text" id="model_name" name="model_name" 
+               value="{{ filters.model_name or '' }}" placeholder="Search model...">
+    </div>
+    <div class="filter-group">
+        <label for="provider_name">Provider</label>
+        <select id="provider_name" name="provider_name">
+            <option value="">All</option>
+            {% for p in provider_names %}
+            <option value="{{ p }}" {% if filters.provider_name == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="machine_hostname">Machine</label>
+        <select id="machine_hostname" name="machine_hostname">
+            <option value="">All</option>
+            {% for m in machine_hostnames %}
+            <option value="{{ m }}" {% if filters.machine_hostname == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="date_start">From</label>
+        <input type="date" id="date_start" name="date_start" 
+               value="{{ filters.date_start.strftime('%Y-%m-%d') if filters.date_start else '' }}">
+    </div>
+    <div class="filter-group">
+        <label for="date_end">To</label>
+        <input type="date" id="date_end" name="date_end" 
+               value="{{ filters.date_end.strftime('%Y-%m-%d') if filters.date_end else '' }}">
+    </div>
+    <div class="filter-group">
+        <label for="status">Status</label>
+        <select id="status" name="status">
+            <option value="">All</option>
+            <option value="completed" {% if filters.status == 'completed' %}selected{% endif %}>Completed</option>
+            <option value="running" {% if filters.status == 'running' %}selected{% endif %}>Running</option>
+            <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>Failed</option>
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="/" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
+
+{% if benchmarks %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Provider</th>
+                <th>Machine</th>
+                <th>Workload</th>
+                <th>Concurrency</th>
+                <th>Throughput (TPS)</th>
+                <th>E2E Mean (ms)</th>
+                <th>Status</th>
+                <th>Started</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in benchmarks %}
+            <tr class="clickable" onclick="window.location='/compare?run_id={{ b.run_id }}'">
+                <td>{{ b.model_name }}</td>
+                <td>{{ b.provider_name }}</td>
+                <td>{{ b.hostname }}</td>
+                <td>{{ b.workload_profile }}</td>
+                <td>{{ b.concurrency }}</td>
+                <td>{{ "%.1f"|format(b.throughput_tps) if b.throughput_tps else '-' }}</td>
+                <td>{{ "%.1f"|format(b.e2e_mean_ms) if b.e2e_mean_ms else '-' }}</td>
+                <td>{{ b.status }}</td>
+                <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M') if b.started_at else '-' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    {% if has_prev %}
+    <a href="?page={{ prev_page }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Previous</a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled>Previous</button>
+    {% endif %}
+    <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+    {% if has_next %}
+    <a href="?page={{ next_page }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Next</a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled>Next</button>
+    {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No benchmarks found</h3>
+    <p>Try adjusting your filters or run a benchmark first.</p>
+</div>
+{% endif %}
+{% endblock %}

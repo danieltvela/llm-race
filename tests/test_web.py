@@ -83,10 +83,10 @@ def test_static_directory_traversal_blocked(server) -> None:
     assert status in (403, 404)
 
 
-def test_index_route_returns_501(server) -> None:
-    """GET / should return 501 (stub)."""
+def test_index_route_returns_200(server) -> None:
+    """GET / should return 200 with real implementation."""
     status, body, headers = _get("/")
-    assert status == 501
+    assert status == 200
 
 
 def test_compare_route_returns_501(server) -> None:
@@ -105,3 +105,38 @@ def test_csv_export_route_returns_501(server) -> None:
     """GET /export/csv should return 501 (stub)."""
     status, body, headers = _get("/export/csv")
     assert status == 501
+
+
+def test_index_returns_html(server) -> None:
+    """Index page should return 200 with HTML content."""
+    status, body, headers = _get("/")
+    assert status == 200
+    assert b"text/html" in headers.get("Content-Type", "").encode() or b"Benchmarks" in body
+
+
+def test_index_contains_filter_form(server) -> None:
+    """Index page should contain filter form fields."""
+    status, body, headers = _get("/")
+    assert status == 200
+    filters_found = sum(term in body for term in [b"model_name", b"provider_name", b"machine", b"date_start", b"date_end"])
+    assert filters_found >= 3, f"Expected at least 3 filter fields, found {filters_found}"
+
+
+def test_index_pagination_controls(server) -> None:
+    """Index page should contain pagination controls or empty state."""
+    status, body, headers = _get("/?page=1")
+    assert status == 200
+    assert (
+        b"Page" in body
+        or b"page" in body
+        or b"Previous" in body
+        or b"Next" in body
+        or b"No benchmarks found" in body
+    )
+
+
+def test_index_empty_state(server) -> None:
+    """Index page with no data should show empty state."""
+    status, body, headers = _get("/")
+    assert status == 200
+    assert (b"Benchmarks" in body) or (b"benchmarks" in body)

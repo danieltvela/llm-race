@@ -23,7 +23,9 @@ from urllib.parse import urlparse, parse_qs
 from jinja2 import Environment, FileSystemLoader, PackageLoader
 
 from llm_race.config import DB_PATH, WEB_HOST, WEB_PORT
-from llm_race.db.models import init_db
+from llm_race.db.models import init_db, Model, Machine, Benchmark
+from llm_race.db.types import BenchmarkFilters
+from llm_race.db.queries import list_benchmarks
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,74 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.send_error(500, f"Internal Server Error: {exc}")
 
     def handle_index(self, params: dict[str, list[str]]) -> None:
-        self._send_501()
+        model_name = params.get("model_name", [None])[0]
+        provider_name = params.get("provider_name", [None])[0]
+        machine_hostname = params.get("machine_hostname", [None])[0]
+        date_start_str = params.get("date_start", [None])[0]
+        date_end_str = params.get("date_end", [None])[0]
+        status = params.get("status", [None])[0]
+        workload_profile = params.get("workload_profile", [None])[0]
+        prompt_size = params.get("prompt_size", [None])[0]
+
+        page = int(params.get("page", ["1"])[0])
+        limit = int(params.get("limit", ["20"])[0])
+        sort_by = params.get("sort_by", ["started_at"])[0]
+        sort_order = params.get("sort_order", ["desc"])[0]
+
+        date_start = datetime.fromisoformat(date_start_str) if date_start_str else None
+        date_end = datetime.fromisoformat(date_end_str) if date_end_str else None
+
+        filters = BenchmarkFilters(
+            model_name=model_name,
+            provider_name=provider_name,
+            machine_hostname=machine_hostname,
+            date_start=date_start,
+            date_end=date_end,
+            status=status,
+            workload_profile=workload_profile,
+            prompt_size=prompt_size,
+        )
+
+        with _get_db_session() as session:
+            result = list_benchmarks(
+                session,
+                filters=filters,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                offset=(page - 1) * limit,
+                limit=limit,
+            )
+
+            total_pages = max(1, (result.total_count + limit - 1) // limit)
+            has_prev = page > 1
+            has_next = page < total_pages
+
+            model_names = [row[0] for row in session.query(Model.name).distinct().order_by(Model.name).all()]
+            provider_names = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
+            machine_hostnames = [row[0] for row in session.query(Machine.hostname).distinct().order_by(Machine.hostname).all()]
+
+            html = jinja_env.get_template("index.html").render(
+                benchmarks=result.items,
+                total_count=result.total_count,
+                page=page,
+                limit=limit,
+                total_pages=total_pages,
+                has_prev=has_prev,
+                has_next=has_next,
+                prev_page=page - 1 if has_prev else 1,
+                next_page=page + 1 if has_next else page,
+                filters=filters,
+                model_names=model_names,
+                provider_names=provider_names,
+                machine_hostnames=machine_hostnames,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
 
     def handle_compare(self, params: dict[str, list[str]]) -> None:
         self._send_501()
