@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Timeseries — LLM Race{% endblock %}
+{% block content %}
+<h1>Performance Timeseries</h1>
+
+<form method="GET" action="/timeseries" class="filter-form">
+    <div class="filter-group">
+        <label for="model">Model</label>
+        <select id="model" name="model">
+            <option value="">All Models</option>
+            {% for m in model_options %}
+            <option value="{{ m }}" {% if selected_model == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="provider">Provider</label>
+        <select id="provider" name="provider">
+            <option value="">All Providers</option>
+            {% for p in provider_options %}
+            <option value="{{ p }}" {% if selected_provider == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="metric">Metric</label>
+        <select id="metric" name="metric">
+            {% for m in metric_options %}
+            <option value="{{ m }}" {% if selected_metric == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="date_start">From</label>
+        <input type="date" id="date_start" name="date_start" value="{{ date_start }}">
+    </div>
+    <div class="filter-group">
+        <label for="date_end">To</label>
+        <input type="date" id="date_end" name="date_end" value="{{ date_end }}">
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Update</button>
+        <a href="/timeseries" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
+
+{% if error %}
+<div class="error-message">
+    <p>{{ error }}</p>
+</div>
+{% elif points %}
+<div class="chart-container">
+    <canvas id="timeseriesChart"></canvas>
+</div>
+
+<div class="table-container" style="margin-top: 2rem;">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Value</th>
+                <th>Run ID</th>
+                <th>Label</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in points %}
+            <tr>
+                <td>{{ p.date[:10] }}</td>
+                <td>{{ "%.2f"|format(p.value) if p.value is not none else '-' }}</td>
+                <td><code>{{ p.run_id[:8] }}...</code></td>
+                <td>{{ p.label }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No data for selected filters</h3>
+    <p>Try adjusting your filter criteria or run benchmarks first.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if points %}
+<script>
+    const points = {{ points|tojson }};
+    const labels = points.map(p => p.date ? p.date.substring(0, 10) : '');
+    const values = points.map(p => p.value);
+
+    new Chart(document.getElementById('timeseriesChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '{{ selected_metric }}',
+                data: values,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: true, position: 'top' },
+                title: { display: true, text: '{{ selected_metric }} over Time' },
+                tooltip: {
+                    callbacks: {
+                        afterLabel: function(context) {
+                            const idx = context.dataIndex;
+                            const p = points[idx];
+                            return 'Run: ' + (p.run_id ? p.run_id.substring(0, 8) + '...' : 'N/A');
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { title: { display: true, text: 'Date' } },
+                y: { beginAtZero: false, title: { display: true, text: '{{ selected_metric }}' } }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

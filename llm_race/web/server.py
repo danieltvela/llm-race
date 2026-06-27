@@ -27,7 +27,7 @@ from llm_race.db.models import init_db, Model, Machine, Benchmark
 from collections import OrderedDict
 
 from llm_race.db.types import BenchmarkFilters
-from llm_race.db.queries import list_benchmarks, compare_runs
+from llm_race.db.queries import list_benchmarks, compare_runs, timeseries
 
 logger = logging.getLogger(__name__)
 
@@ -289,7 +289,70 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             self._send_html(html)
 
     def handle_timeseries(self, params: dict[str, list[str]]) -> None:
-        self._send_501()
+        model = params.get("model", [None])[0]
+        provider = params.get("provider", [None])[0]
+        metric = params.get("metric", ["throughput_tps"])[0]
+        date_start_str = params.get("date_start", [None])[0]
+        date_end_str = params.get("date_end", [None])[0]
+        level = params.get("level", ["benchmark"])[0]
+
+        date_start = datetime.fromisoformat(date_start_str) if date_start_str else None
+        date_end = datetime.fromisoformat(date_end_str) if date_end_str else None
+
+        allowed_metrics = [
+            "throughput_tps", "tokens_per_second", "e2e_mean_ms", "e2e_p50_ms",
+            "e2e_p90_ms", "e2e_p99_ms", "wall_clock_seconds", "total_tokens",
+            "total_requests", "successful_requests", "failed_requests",
+        ]
+
+        with _get_db_session() as session:
+            model_options = [row[0] for row in session.query(Model.name).distinct().order_by(Model.name).all()]
+            provider_options = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
+
+            if metric not in allowed_metrics:
+                error = f"Invalid metric '{metric}'. Allowed: {', '.join(allowed_metrics)}"
+                html = jinja_env.get_template("timeseries.html").render(
+                    points=[],
+                    metric_options=allowed_metrics,
+                    model_options=model_options,
+                    provider_options=provider_options,
+                    selected_model=model or "",
+                    selected_provider=provider or "",
+                    selected_metric=metric,
+                    date_start=date_start_str or "",
+                    date_end=date_end_str or "",
+                    error=error,
+                    total_points=0,
+                )
+                self._send_html(html)
+                return
+
+            points = timeseries(session, model, provider, metric, date_start, date_end, level)
+
+            chart_points = [
+                {
+                    "date": p.date.isoformat() if p.date else None,
+                    "value": round(p.value, 2) if p.value is not None else None,
+                    "run_id": p.run_id,
+                    "label": p.label,
+                }
+                for p in points
+            ]
+
+            html = jinja_env.get_template("timeseries.html").render(
+                points=chart_points,
+                metric_options=allowed_metrics,
+                model_options=model_options,
+                provider_options=provider_options,
+                selected_model=model or "",
+                selected_provider=provider or "",
+                selected_metric=metric,
+                date_start=date_start_str or "",
+                date_end=date_end_str or "",
+                error=None,
+                total_points=len(points),
+            )
+            self._send_html(html)
 
     def handle_csv_export(self, params: dict[str, list[str]]) -> None:
         self._send_501()

@@ -95,10 +95,32 @@ def test_compare_route_returns_200(server) -> None:
     assert status == 200
 
 
-def test_timeseries_route_returns_501(server) -> None:
-    """GET /timeseries should return 501 (stub)."""
+def test_timeseries_route_returns_200(server) -> None:
+    """GET /timeseries should return 200 (real implementation)."""
     status, body, headers = _get("/timeseries")
-    assert status == 501
+    assert status == 200
+
+
+def test_timeseries_contains_chart_container(server) -> None:
+    """Timeseries page should contain canvas or chart-related elements."""
+    status, body, headers = _get("/timeseries")
+    assert status == 200
+    assert b"<canvas" in body or b"chart" in body.lower() or b"timeseries" in body.lower()
+
+
+def test_timeseries_contains_filter_form(server) -> None:
+    """Timeseries page should contain filter fields."""
+    status, body, headers = _get("/timeseries")
+    assert status == 200
+    assert any(term in body for term in [b"model", b"provider", b"metric", b"date_start", b"date_end"])
+
+
+def test_timeseries_empty_state(server) -> None:
+    """Timeseries page with no data should show empty state."""
+    status, body, headers = _get("/timeseries")
+    assert status == 200
+    # Either shows data or empty state message
+    assert (b"No data" in body or b"data" in body.lower() or b"timeseries" in body.lower() or b"canvas" in body)
 
 
 def test_csv_export_route_returns_501(server) -> None:
