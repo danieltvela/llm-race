@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LLM Race{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <a href="/">🏎️ LLM Race</a>
+        </div>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Benchmarks</a>
+            <a href="/compare" class="nav-link">Compare</a>
+            <a href="/timeseries" class="nav-link">Timeseries</a>
+            <a href="/export/csv" class="nav-link">Export CSV</a>
+        </div>
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">🌙</button>
+    </nav>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>LLM Race — Benchmark Performance Viewer</p>
+    </footer>
+
+    <script>
+        (function() {
+            var html = document.documentElement;
+            var toggle = document.getElementById('theme-toggle');
+            var saved = localStorage.getItem('llm-race-theme');
+            if (saved === 'light') {
+                html.setAttribute('data-theme', 'light');
+                if (toggle) toggle.textContent = '\u2600\uFE0F';
+            } else {
+                html.setAttribute('data-theme', '');
+                if (toggle) toggle.textContent = '\uD83C\uDF19';
+            }
+            if (toggle) {
+                toggle.addEventListener('click', function() {
+                    var current = html.getAttribute('data-theme');
+                    if (current === 'light') {
+                        html.setAttribute('data-theme', '');
+                        toggle.textContent = '\uD83C\uDF19';
+                        localStorage.setItem('llm-race-theme', 'dark');
+                    } else {
+                        html.setAttribute('data-theme', 'light');
+                        toggle.textContent = '\u2600\uFE0F';
+                        localStorage.setItem('llm-race-theme', 'light');
+                    }
+                });
+            }
+        })();
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
