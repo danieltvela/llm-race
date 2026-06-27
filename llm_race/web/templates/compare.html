@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Compare Runs — LLM Race{% endblock %}
+{% block content %}
+<h1>Compare Benchmark Runs</h1>
+
+<form method="GET" action="/compare" class="filter-form">
+    <div class="filter-group">
+        <label for="run_id">Run IDs (2-4, comma-separated)</label>
+        <input type="text" id="run_id" name="run_id" 
+               value="{{ run_ids|join(',') if run_ids else '' }}" 
+               placeholder="e.g. uuid-1, uuid-2, uuid-3" style="width: 100%; font-family: monospace;">
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Compare</button>
+    </div>
+</form>
+
+{% if error %}
+<div class="error-message">
+    <p>{{ error }}</p>
+</div>
+{% elif runs %}
+<div class="chart-container">
+    <canvas id="compareChart"></canvas>
+</div>
+
+<div class="table-container" style="margin-top: 2rem;">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Metric</th>
+                {% for run in runs %}
+                <th>{{ run.model_name }}<br><small>{{ run.run_id[:8] }}...</small></th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for metric_name, values in metrics_table.items() %}
+            <tr>
+                <td><strong>{{ metric_name }}</strong></td>
+                {% for value in values %}
+                <td>{{ value if value is not none else '-' }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="run-details">
+    {% for run in runs %}
+    <details>
+        <summary>{{ run.model_name }} — {{ run.hostname }} ({{ run.run_id[:8] }})</summary>
+        <p><strong>Provider:</strong> {{ run.provider_name }}</p>
+        <p><strong>Workload:</strong> {{ run.workload_profile }}</p>
+        <p><strong>Concurrency:</strong> {{ run.concurrency }}</p>
+        <p><strong>Started:</strong> {{ run.started_at }}</p>
+        <p><strong>Status:</strong> {{ run.status }}</p>
+    </details>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No runs to compare</h3>
+    <p>Enter 2-4 benchmark run IDs above to compare their performance metrics.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    {% if chart_data and chart_data.datasets and chart_data.datasets|length > 0 %}
+    const ctx = document.getElementById('compareChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {{ chart_data|tojson }},
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'top' },
+                title: { display: true, text: 'Performance Metrics Comparison' }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}

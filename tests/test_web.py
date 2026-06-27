@@ -89,10 +89,10 @@ def test_index_route_returns_200(server) -> None:
     assert status == 200
 
 
-def test_compare_route_returns_501(server) -> None:
-    """GET /compare should return 501 (stub)."""
+def test_compare_route_returns_200(server) -> None:
+    """GET /compare should return 200 (real implementation now)."""
     status, body, headers = _get("/compare")
-    assert status == 501
+    assert status == 200
 
 
 def test_timeseries_route_returns_501(server) -> None:
@@ -140,3 +140,31 @@ def test_index_empty_state(server) -> None:
     status, body, headers = _get("/")
     assert status == 200
     assert (b"Benchmarks" in body) or (b"benchmarks" in body)
+
+
+def test_compare_with_single_run_shows_error(server) -> None:
+    """GET /compare?run_id=abc should show validation error."""
+    status, body, headers = _get("/compare?run_id=abc-123")
+    assert status == 200
+    assert any(term in body for term in [b"2-4", b"select", b"error", b"invalid"])
+
+
+def test_compare_contains_chart_container(server) -> None:
+    """Compare page should contain canvas for Chart.js."""
+    status, body, headers = _get("/compare")
+    assert status == 200
+    assert b"<canvas" in body or b"chart" in body.lower()
+
+
+def test_compare_contains_metrics_table(server) -> None:
+    """Compare page should contain metrics table structure."""
+    status, body, headers = _get("/compare")
+    assert status == 200
+    assert b"table" in body.lower() or b"Metric" in body or b"metrics" in body.lower()
+
+
+def test_compare_contains_empty_state(server) -> None:
+    """Compare page with no run_ids should show empty state."""
+    status, body, headers = _get("/compare")
+    assert status == 200
+    assert b"No runs to compare" in body or b"Enter 2-4" in body

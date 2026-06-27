@@ -24,8 +24,10 @@ from jinja2 import Environment, FileSystemLoader, PackageLoader
 
 from llm_race.config import DB_PATH, WEB_HOST, WEB_PORT
 from llm_race.db.models import init_db, Model, Machine, Benchmark
+from collections import OrderedDict
+
 from llm_race.db.types import BenchmarkFilters
-from llm_race.db.queries import list_benchmarks
+from llm_race.db.queries import list_benchmarks, compare_runs
 
 logger = logging.getLogger(__name__)
 
@@ -169,8 +171,122 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html.encode("utf-8"))
 
+    def _send_html(self, html: str, status: int = 200) -> None:
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.end_headers()
+        self.wfile.write(html.encode("utf-8"))
+
     def handle_compare(self, params: dict[str, list[str]]) -> None:
-        self._send_501()
+        run_ids = params.get("run_id", [])
+        if len(run_ids) == 1 and "," in run_ids[0]:
+            run_ids = run_ids[0].split(",")
+        run_ids = [r.strip() for r in run_ids if r.strip()]
+
+        if not run_ids:
+            html = jinja_env.get_template("compare.html").render(
+                error=None,
+                runs=[],
+                metrics_table={},
+                chart_data={},
+                run_ids=run_ids,
+            )
+            self._send_html(html)
+            return
+
+        if len(run_ids) < 2 or len(run_ids) > 4:
+            error = "Please select 2 to 4 benchmark runs to compare."
+            html = jinja_env.get_template("compare.html").render(
+                error=error,
+                runs=[],
+                metrics_table={},
+                chart_data={},
+                run_ids=run_ids,
+            )
+            self._send_html(html)
+            return
+
+        with _get_db_session() as session:
+            runs = compare_runs(session, run_ids)
+
+            if not runs:
+                error = "No benchmark runs found for the given IDs."
+                html = jinja_env.get_template("compare.html").render(
+                    error=error,
+                    runs=[],
+                    metrics_table={},
+                    chart_data={},
+                    run_ids=run_ids,
+                )
+                self._send_html(html)
+                return
+
+            metrics_table = OrderedDict()
+            metrics_table["Model"] = [r.model_name for r in runs]
+            metrics_table["Provider"] = [r.provider_name for r in runs]
+            metrics_table["Machine"] = [r.hostname for r in runs]
+            metrics_table["Throughput (TPS)"] = [
+                round(r.throughput_tps, 1) if r.throughput_tps is not None else None
+                for r in runs
+            ]
+            metrics_table["E2E Mean (ms)"] = [
+                round(r.e2e_mean_ms, 1) if r.e2e_mean_ms is not None else None
+                for r in runs
+            ]
+            metrics_table["E2E P50 (ms)"] = [
+                round(r.e2e_p50_ms, 1) if r.e2e_p50_ms is not None else None
+                for r in runs
+            ]
+            metrics_table["E2E P90 (ms)"] = [
+                round(r.e2e_p90_ms, 1) if r.e2e_p90_ms is not None else None
+                for r in runs
+            ]
+            metrics_table["E2E P99 (ms)"] = [
+                round(r.e2e_p99_ms, 1) if r.e2e_p99_ms is not None else None
+                for r in runs
+            ]
+            metrics_table["Total Requests"] = [r.total_requests for r in runs]
+            metrics_table["Success Rate (%)"] = [
+                round(r.successful_requests / r.total_requests * 100, 1)
+                if r.total_requests else None
+                for r in runs
+            ]
+            metrics_table["Wall Clock (s)"] = [
+                round(r.wall_clock_seconds, 1) if r.wall_clock_seconds is not None else None
+                for r in runs
+            ]
+
+            chart_metrics = [
+                "Throughput (TPS)",
+                "E2E Mean (ms)",
+                "E2E P50 (ms)",
+                "E2E P90 (ms)",
+                "E2E P99 (ms)",
+            ]
+            chart_datasets = []
+            colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444"]
+            for i, run in enumerate(runs):
+                color = colors[i % 4]
+                data = [metrics_table[m][i] for m in chart_metrics]
+                chart_datasets.append(
+                    {
+                        "label": run.model_name[:20],
+                        "data": data,
+                        "backgroundColor": color,
+                        "borderColor": color,
+                        "borderWidth": 1,
+                    }
+                )
+            chart_data = {"labels": chart_metrics, "datasets": chart_datasets}
+
+            html = jinja_env.get_template("compare.html").render(
+                runs=runs,
+                metrics_table=metrics_table,
+                chart_data=chart_data,
+                error=None,
+                run_ids=run_ids,
+            )
+            self._send_html(html)
 
     def handle_timeseries(self, params: dict[str, list[str]]) -> None:
         self._send_501()
