@@ -1,0 +1,19 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/danielvela/projects/ai/llm-race
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 9 items
+
+tests/test_warmup.py::TestWarmupDiscard::test_warmup_discarded PASSED    [ 11%]
+tests/test_warmup.py::TestWarmupDiscard::test_warmup_zero PASSED         [ 22%]
+tests/test_warmup.py::TestWarmupDiscard::test_measured_zero PASSED       [ 33%]
+tests/test_warmup.py::TestRequestIDs::test_sequential_ids PASSED         [ 44%]
+tests/test_warmup.py::TestRequestIDs::test_ids_across_batches PASSED     [ 55%]
+tests/test_warmup.py::TestDefaults::test_default_warmup PASSED           [ 66%]
+tests/test_warmup.py::TestDefaults::test_default_measured PASSED         [ 77%]
+tests/test_warmup.py::TestCLIArgs::test_cli_defaults PASSED              [ 88%]
+tests/test_warmup.py::TestCLIArgs::test_cli_custom PASSED                [100%]
+
+============================== 9 passed in 11.41s ==============================

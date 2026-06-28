@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import sys
 import uuid
 
 from llm_race.bench.runner import run_benchmarks
@@ -75,8 +76,48 @@ def main() -> None:
         action="store_true",
         help="Re-collect machine info even if cached (not yet cached)",
     )
+    run_parser.add_argument(
+        "--preset",
+        default=None,
+        help="Load preset config (use --list-presets to see available)",
+    )
+    run_parser.add_argument(
+        "--list-presets",
+        action="store_true",
+        help="List all available presets and exit",
+    )
 
     args = parser.parse_args()
+
+    # Handle --list-presets: print and exit immediately.
+    if args.list_presets:
+        from llm_race.config.presets import list_presets as _list_presets
+        presets = _list_presets()
+        for p in presets:
+            print(f"{p['key']}: {p['name']} ({p['provider']}/{p['model']})")
+        return
+
+    # Handle --preset: load and merge with explicit CLI flags.
+    if args.preset:
+        try:
+            from llm_race.config import list_presets as _list_all
+            from llm_race.config.presets import load_preset
+            preset = load_preset(args.preset)
+        except KeyError:
+            print(f"Error: unknown preset {args.preset!r}. Available presets:")
+            for p in _list_all():
+                print(f"  {p['key']}: {p['name']} ({p['provider']})")
+            sys.exit(1)
+        # Preset acts as defaults; explicit CLI flags override.
+        def _is_default(val: str, default: str) -> bool:
+            return val == default
+
+        if _is_default(args.provider, DEFAULT_PROVIDER) and "provider" in preset:
+            args.provider = preset["provider"]
+        if _is_default(args.model, DEFAULT_MODEL) and "model" in preset:
+            args.model = preset["model"]
+        if _is_default(args.base_url, DEFAULT_BASE_URL) and "base_url" in preset:
+            args.base_url = preset["base_url"]
     logger = logging.getLogger(__name__)
 
     # Resolve concurrency and prompt_lengths from workload profile if set.

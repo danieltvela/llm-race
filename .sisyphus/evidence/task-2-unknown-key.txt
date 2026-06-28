@@ -1,0 +1,3 @@
+Task 2 — unknown preset key
+- load_preset('nonexistent') -> KeyError: "Unknown preset 'nonexistent'. Available: qwen3-8b-vllm, qwen3-27b-fp8-vllm, llama3.2-3b-lm-studio, mistral-7b-lm-studio, llama3.2-3b-mlx, mistral-7b-mlx, llama3.2-ollama, mistral-ollama"
+STATUS: PASS

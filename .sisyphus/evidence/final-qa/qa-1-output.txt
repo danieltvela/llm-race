@@ -1,0 +1,3 @@
+PASS: len(metrics) == 6
+PASS: provider.call_count == 10
+QA Scenario 1: PASSED

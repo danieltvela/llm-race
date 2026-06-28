@@ -1,0 +1,8 @@
+Task 3 — CLI --help shows preset flags
+python3 -m llm_race run --help 2>&1 | grep -E "(--preset|--list-presets)"
+Result:
+  [--no-db] [--force-detect] [--preset PRESET]
+  [--list-presets]
+  --preset PRESET       Load preset config (use --list-presets to see available)
+  --list-presets        List all available presets and exit
+STATUS: PASS

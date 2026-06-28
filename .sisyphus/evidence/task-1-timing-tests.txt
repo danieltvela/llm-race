@@ -1,0 +1,28 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/danielvela/projects/ai/llm-race
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 18 items
+
+tests/test_timing.py::TestComputeLatencyStats::test_normal_values PASSED [  5%]
+tests/test_timing.py::TestComputeLatencyStats::test_empty_list PASSED    [ 11%]
+tests/test_timing.py::TestComputeLatencyStats::test_single_value PASSED  [ 16%]
+tests/test_timing.py::TestComputeLatencyStats::test_all_same PASSED      [ 22%]
+tests/test_timing.py::TestComputeLatencyStats::test_floats PASSED        [ 27%]
+tests/test_timing.py::TestComputeLatencyStats::test_unsorted_values PASSED [ 33%]
+tests/test_timing.py::TestComputeLatencyStats::test_two_values PASSED    [ 38%]
+tests/test_timing.py::TestComputeLatencyStats::test_negative_values PASSED [ 44%]
+tests/test_timing.py::TestComputeLatencyStats::test_large_values PASSED  [ 50%]
+tests/test_timing.py::TestComputeLatencyStats::test_returns_dict PASSED  [ 55%]
+tests/test_timing.py::TestComputeItlStats::test_normal_values PASSED     [ 61%]
+tests/test_timing.py::TestComputeItlStats::test_empty_list PASSED        [ 66%]
+tests/test_timing.py::TestComputeItlStats::test_single_value PASSED      [ 72%]
+tests/test_timing.py::TestComputeItlStats::test_all_same PASSED          [ 77%]
+tests/test_timing.py::TestComputeItlStats::test_floats PASSED            [ 83%]
+tests/test_timing.py::TestComputeItlStats::test_returns_dict PASSED      [ 88%]
+tests/test_timing.py::TestComputeItlStats::test_sorted_values PASSED     [ 94%]
+tests/test_timing.py::TestComputeItlStats::test_unsorted_values PASSED   [100%]
+
+============================== 18 passed in 0.04s ==============================

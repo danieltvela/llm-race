@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/danielvela/projects/ai/llm-race
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+tests/test_bench_prompts.py::TestGeneratePrompt::test_returns_string PASSED [ 16%]
+tests/test_bench_prompts.py::TestGeneratePrompt::test_capitalized_sentences PASSED [ 33%]
+tests/test_bench_prompts.py::TestGeneratePrompt::test_no_placeholder_text PASSED [ 50%]
+tests/test_bench_prompts.py::TestGeneratePrompt::test_small_token_approx PASSED [ 66%]
+tests/test_bench_prompts.py::TestGeneratePrompt::test_deterministic_with_seed PASSED [ 83%]
+tests/test_bench_prompts.py::TestGeneratePrompt::test_output_length_scales PASSED [100%]
+
+============================== 6 passed in 0.05s ===============================

@@ -5,7 +5,7 @@ Benchmark and speed-test tracker for LLM models across different providers, mach
 ## What it tracks
 
 - **Models & variants**: base model, quantization (FP8, INT4, AWQ, GGUF Q4_K_M, etc.), context window
-- **Providers**: OpenAI, Anthropic, xAI, local vLLM, Ollama, LM Studio, custom endpoints
+- **Providers**: vLLM, Ollama, LM Studio, MLX (extensible — add your own by implementing the `Provider` interface)
 - **Infrastructure**: machine specs, GPU, OS, driver versions, network conditions
 - **Workloads**: prompt size, expected output length, concurrency level (single user → many agents → massive concurrency)
 - **Metrics**: tokens/sec (input & output), TTFT (time to first token), total latency, p50/p90/p99 latency, error rate, cost per token
@@ -17,7 +17,7 @@ cd projects/ai/llm-race
 pip install -r requirements.txt
 
 # Run a benchmark
-python -m llm_race.bench run --model "qwen3.6-27b-fp8" --provider vllm --endpoint http://192.168.1.47:8005
+python -m llm_race.bench run --model "qwen3.6-27b-fp8" --provider vllm --base-url http://192.168.1.47:8005
 
 # View results in browser
 python -m llm_race.web
@@ -27,11 +27,40 @@ python -m llm_race.web
 
 ```
 llm_race/
-├── bench/          # Benchmark runner (CLI)
-├── db/             # SQLite schema & queries
-├── web/            # Web viewer (static HTML + Python server)
-├── config/         # Model presets, provider configs
-└── utils/          # System info collection, timing helpers
+├── __init__.py
+├── __main__.py              # Entry: python -m llm_race
+├── bench/                   # Benchmark runner (CLI)
+│   ├── cli.py               # argparse commands (run)
+│   ├── runner.py            # orchestrates a benchmark run
+│   ├── workloads.py         # workload profiles (single-user, multi-agent, …)
+│   └── prompts.py           # prompt generation by token length
+├── config/                  # Provider implementations & configuration
+│   ├── __init__.py          # global config (DB path, defaults) + provider factory
+│   ├── base.py              # abstract Provider base class
+│   ├── vllm.py / ollama.py / lm_studio.py / mlx_lm.py
+│   ├── presets.py / presets.json
+├── db/                      # Data layer
+│   ├── models.py            # SQLAlchemy ORM (Model, Machine, Benchmark, Result)
+│   ├── schema.sql           # raw schema for reference
+│   ├── queries.py           # list, compare, timeseries queries
+│   ├── saver.py             # persist benchmark results
+│   └── types.py             # query result dataclasses
+├── data/
+│   └── benchmarks.db        # SQLite database
+├── utils/                   # Shared utilities
+│   ├── system.py            # machine/GPU/OS info
+│   ├── timing.py            # token timing, latency percentiles
+│   ├── reporter.py          # format results (table, CSV, JSON)
+│   └── sse.py               # SSE stream parser for OpenAI-compatible APIs
+└── web/                     # Web viewer
+    ├── __main__.py          # Entry: python -m llm_race.web
+    ├── server.py            # HTTP server (http.server + Jinja2)
+    ├── static/style.css     # Dark-theme CSS
+    └── templates/           # Jinja2 templates
+        ├── base.html
+        ├── index.html       # benchmark list with filters
+        ├── compare.html     # side-by-side comparison
+        └── timeseries.html  # performance charts (Chart.js)
 ```
 
 ## Workload profiles
@@ -46,17 +75,19 @@ llm_race/
 
 ## Prompt sizes
 
-| Size | Tokens (approx) | Use case |
-|------|-----------------|----------|
-| `tiny` | 10-50 | Quick commands, tool calls |
-| `small` | 100-500 | Short questions, code snippets |
-| `medium` | 500-2000 | Document analysis, longer context |
-| `large` | 2000-8000 | Full files, extended conversation |
-| `max` | 8000+ | Near-context-limit workloads |
+| Prompt tokens | Use case |
+|---------------|----------|
+| 64 | Short commands, quick queries |
+| 512 | Code snippets, short documents |
+| 2048 | Document analysis, moderate context |
+| 4096 | Large files, extended conversation |
+
+Prompt lengths are passed as integer values (`--prompt-lengths 64 512 2048 4096`).
+Custom prompt templates can be added in `llm_race/bench/prompts.py`.
 
 ## Database
 
-SQLite database at `data/benchmarks.db`. Schema includes:
+SQLite database at `llm_race/data/benchmarks.db`. Schema includes:
 - `models`: model name, version, quantization, provider
 - `machines`: hardware specs, OS, GPU info
 - `benchmarks`: test runs with workload profile, prompt size, concurrency

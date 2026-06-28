@@ -79,7 +79,7 @@ async def run_scenario(
     limits: httpx.Limits | None = None,
     warmup_iterations: int = DEFAULT_WARMUP_ITERATIONS,
     measured_iterations: int = DEFAULT_MEASURED_ITERATIONS,
-) -> list[RequestMetrics]:
+) -> tuple[list[RequestMetrics], float]:
     """Execute warmup then measured iterations of parallel streaming requests.
 
     Args:
@@ -95,7 +95,9 @@ async def run_scenario(
         measured_iterations: Number of measured batches to run and collect.
 
     Returns:
-        List of ``RequestMetrics`` from all measured batches.
+        Tuple of (metrics, wall_clock_seconds) where ``wall_clock_seconds``
+        is the elapsed wall time of the measured iterations only (warmup
+        time is excluded from throughput calculation).
     """
     prompt = generate_prompt(prompt_length)
     messages: list[dict[str, Any]] = [
@@ -113,7 +115,7 @@ async def run_scenario(
 
     if measured_iterations == 0:
         logger.warning("measured_iterations is 0, returning empty results")
-        return []
+        return [], 0.0
 
     async def _run_batch(client: httpx.AsyncClient) -> list[RequestMetrics]:
         coros = [
@@ -167,7 +169,7 @@ async def run_scenario(
 
         return metrics_list
 
-    async def _run_all(client: httpx.AsyncClient) -> list[RequestMetrics]:
+    async def _run_all(client: httpx.AsyncClient) -> tuple[list[RequestMetrics], float]:
         for i in range(warmup_iterations):
             batch = await _run_batch(client)
             failed = [m for m in batch if m.status == "error"]
@@ -175,6 +177,7 @@ async def run_scenario(
                 logger.warning("Request failed during warmup: %s", m.error_message)
             logger.info("Warmup iteration %d/%d complete", i + 1, warmup_iterations)
 
+        wall_start = time.monotonic()
         all_metrics: list[RequestMetrics] = []
         for i in range(measured_iterations):
             batch = await _run_batch(client)
@@ -182,15 +185,16 @@ async def run_scenario(
                 m.request_id = len(all_metrics) + j
             all_metrics.extend(batch)
             logger.info("Measured iteration %d/%d complete", i + 1, measured_iterations)
+        wall_elapsed = time.monotonic() - wall_start
 
-        return all_metrics
+        return all_metrics, wall_elapsed
 
     if limits is not None:
         async with httpx.AsyncClient(limits=limits, timeout=provider.timeout) as client:
-            metrics = await _run_all(client)
+            metrics, wall_elapsed = await _run_all(client)
     else:
         async with httpx.AsyncClient() as client:
-            metrics = await _run_all(client)
+            metrics, wall_elapsed = await _run_all(client)
 
     logger.info(
         "Scenario completed concurrency=%d prompt_length=%d success=%d/%d (warmup=%d measured=%d)",
@@ -201,7 +205,7 @@ async def run_scenario(
         warmup_iterations,
         measured_iterations,
     )
-    return metrics
+    return metrics, wall_elapsed
 
 
 def _build_scenario_result(
@@ -320,8 +324,7 @@ async def run_benchmarks(
     for prompt_len in prompt_lengths:
         for conc in concurrency:
             started_at = datetime.utcnow()
-            wall_start = time.monotonic()
-            metrics = await run_scenario(
+            metrics, wall_elapsed = await run_scenario(
                 provider=provider,
                 model=model,
                 concurrency=conc,
@@ -332,7 +335,6 @@ async def run_benchmarks(
                 warmup_iterations=warmup_iterations,
                 measured_iterations=measured_iterations,
             )
-            wall_elapsed = time.monotonic() - wall_start
 
             scenario = _build_scenario_result(metrics, conc, prompt_len, wall_elapsed)
             all_results.append(scenario)

@@ -66,7 +66,7 @@ class TestWarmupDiscard:
     @pytest.mark.asyncio
     async def test_warmup_discarded(self) -> None:
         provider = FakeProvider()
-        metrics = await run_scenario(
+        metrics, wall_elapsed = await run_scenario(
             provider=provider,
             model="test-model",
             concurrency=2,
@@ -79,11 +79,12 @@ class TestWarmupDiscard:
         )
         assert len(metrics) == 6, f"Expected 6 metrics, got {len(metrics)}"
         assert provider.call_count == 10, f"Expected 10 calls, got {provider.call_count}"
+        assert wall_elapsed > 0, "Wall clock should be positive"
 
     @pytest.mark.asyncio
     async def test_warmup_zero(self) -> None:
         provider = FakeProvider()
-        metrics = await run_scenario(
+        metrics, wall_elapsed = await run_scenario(
             provider=provider,
             model="test-model",
             concurrency=2,
@@ -96,11 +97,12 @@ class TestWarmupDiscard:
         )
         assert len(metrics) == 4, f"Expected 4 metrics, got {len(metrics)}"
         assert provider.call_count == 4, f"Expected 4 calls, got {provider.call_count}"
+        assert wall_elapsed > 0, "Wall clock should be positive"
 
     @pytest.mark.asyncio
     async def test_measured_zero(self) -> None:
         provider = FakeProvider()
-        metrics = await run_scenario(
+        metrics, wall_elapsed = await run_scenario(
             provider=provider,
             model="test-model",
             concurrency=2,
@@ -112,6 +114,7 @@ class TestWarmupDiscard:
             measured_iterations=0,
         )
         assert len(metrics) == 0, f"Expected 0 metrics, got {len(metrics)}"
+        assert wall_elapsed == 0.0, "Wall clock should be 0 when not measured"
         # NOTE: runner.py returns early when measured_iterations==0, so warmup
         # is also skipped. This is the current behaviour of the code under test.
         assert provider.call_count == 0, f"Expected 0 calls, got {provider.call_count}"
@@ -123,7 +126,7 @@ class TestRequestIDs:
     @pytest.mark.asyncio
     async def test_sequential_ids(self) -> None:
         provider = FakeProvider()
-        metrics = await run_scenario(
+        metrics, wall_elapsed = await run_scenario(
             provider=provider,
             model="test-model",
             concurrency=2,
@@ -135,6 +138,7 @@ class TestRequestIDs:
             measured_iterations=3,
         )
         assert len(metrics) == 6
+        assert wall_elapsed > 0
         ids = [m.request_id for m in metrics]
         assert ids == list(range(6)), f"IDs not sequential: {ids}"
         assert {m.request_id for m in metrics} == set(range(6))
@@ -142,7 +146,7 @@ class TestRequestIDs:
     @pytest.mark.asyncio
     async def test_ids_across_batches(self) -> None:
         provider = FakeProvider()
-        metrics = await run_scenario(
+        metrics, wall_elapsed = await run_scenario(
             provider=provider,
             model="test-model",
             concurrency=1,

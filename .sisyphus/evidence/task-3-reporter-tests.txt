@@ -1,0 +1,22 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0 -- /opt/homebrew/opt/python@3.14/bin/python3.14
+cachedir: .pytest_cache
+rootdir: /Users/danielvela/projects/ai/llm-race
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/test_reporter.py::TestFormatTable::test_header_in_output PASSED    [  8%]
+tests/test_reporter.py::TestFormatTable::test_single_result PASSED       [ 16%]
+tests/test_reporter.py::TestFormatTable::test_multiple_results PASSED    [ 25%]
+tests/test_reporter.py::TestFormatTable::test_empty_list PASSED          [ 33%]
+tests/test_reporter.py::TestSaveCsv::test_csv_created PASSED             [ 41%]
+tests/test_reporter.py::TestSaveCsv::test_csv_content PASSED             [ 50%]
+tests/test_reporter.py::TestSaveCsv::test_empty_list_writes_header_only PASSED [ 58%]
+tests/test_reporter.py::TestSaveCsv::test_csv_values_match PASSED        [ 66%]
+tests/test_reporter.py::TestSaveJson::test_json_created PASSED           [ 75%]
+tests/test_reporter.py::TestSaveJson::test_json_structure PASSED         [ 83%]
+tests/test_reporter.py::TestSaveJson::test_json_content PASSED           [ 91%]
+tests/test_reporter.py::TestSaveJson::test_empty_list_writes_empty_scenarios PASSED [100%]
+
+============================== 12 passed in 0.08s ==============================

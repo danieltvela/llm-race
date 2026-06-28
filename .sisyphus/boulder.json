@@ -1,50 +1,31 @@
 {
-  "active_plan": "/Users/danielvela/projects/ai/llm-race/.sisyphus/plans/add-more-providers.md",
-  "started_at": "2026-06-28T06:02:27.963Z",
+  "active_plan": "/Users/danielvela/projects/ai/llm-race/.sisyphus/plans/issue-10-tests.md",
+  "started_at": "2026-06-28T10:06:51.987Z",
   "session_ids": [
-    "ses_0f3366669ffeQWHmZlQNnjmeb0"
+    "ses_0f320889cffeFT1roBQ4idjMhs"
   ],
   "session_origins": {
-    "ses_0f3366669ffeQWHmZlQNnjmeb0": "direct"
+    "ses_0f320889cffeFT1roBQ4idjMhs": "direct"
   },
-  "plan_name": "add-more-providers",
+  "plan_name": "issue-10-tests",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Add `complete()` abstract method to `Provider` base class",
-      "session_id": "ses_0f32d197dffeb2wu52lqY4rE2x",
+      "task_title": "Create `tests/test_timing.py` — tests for `utils/timing.py`",
+      "session_id": "ses_0f24d240cfferx3cNDWAOvK2MN",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-06-28T06:03:13.336Z"
-    },
-    "todo:3": {
-      "task_key": "todo:3",
-      "task_label": "3",
-      "task_title": "Implement `complete()` in `VLLMProvider`",
-      "session_id": "ses_0f32bf21affeD8klt4yZDN0Zp7",
-      "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-06-28T06:05:29.403Z"
-    },
-    "todo:7": {
-      "task_key": "todo:7",
-      "task_label": "7",
-      "task_title": "Register all providers in `create_provider()` factory",
-      "session_id": "ses_0f3296d63ffengESPUtU467B7k",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-06-28T06:10:14.801Z"
+      "updated_at": "2026-06-28T10:08:29.974Z"
     },
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
-      "task_title": "**Plan Compliance + Scope Fidelity Audit** — `unspecified-high`",
-      "session_id": "ses_0f325db2fffeogVlKdHuEWUlzO",
-      "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "updated_at": "2026-06-28T06:13:38.140Z"
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_0f24b4185ffessAP3z0ArVDeJ2",
+      "agent": "oracle",
+      "updated_at": "2026-06-28T10:11:46.805Z"
     }
   }
 }

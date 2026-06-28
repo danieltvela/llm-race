@@ -59,3 +59,6 @@ def create_provider(provider_type: str, **kwargs: Any) -> Provider:
     raise ValueError(
         f"Unknown provider: {provider_type!r}. Available: vllm, lm_studio, mlx_lm, ollama"
     )
+
+
+from llm_race.config.presets import load_preset, list_presets

@@ -1,0 +1,6 @@
+Task 2 — preset loader happy path
+- python3 -c "from llm_race.config.presets import load_preset, list_presets; print('OK')" -> OK
+- python3 -c "from llm_race.config import load_preset, list_presets; print('OK')" -> OK
+- load_preset('qwen3-8b-vllm') -> OK: loaded qwen3-8b-vllm -> vllm/Qwen3-8B
+- list_presets() -> returns 8 presets, all with keys
+STATUS: PASS

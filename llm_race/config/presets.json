@@ -71,6 +71,24 @@
             "base_url": "http://localhost:11434/v1",
             "api_key_env": "OLLAMA_API_KEY",
             "description": "Mistral served through Ollama for lightweight model comparison"
+        },
+        {
+            "name": "Gemma-4-26B on MLX (local)",
+            "key": "gemma-4-26b-mlx",
+            "provider": "mlx_lm",
+            "model": "google/gemma-4-26b-a4b",
+            "base_url": "http://127.0.0.1:1234/v1",
+            "api_key_env": "MLXLM_API_KEY",
+            "description": "Gemma 4 26B running on Apple Silicon via MLX (local machine)"
+        },
+        {
+            "name": "Qwen3.6-35B-A3B on vLLM (local)",
+            "key": "qwen3.6-35b-vllm",
+            "provider": "vllm",
+            "model": "Qwen3.6-35B-A3B-FP8",
+            "base_url": "http://192.168.1.47:8005/v1",
+            "api_key_env": "VLLM_API_KEY",
+            "description": "Qwen3.6-35B-A3B FP8 on vLLM (homelab server)"
         }
     ]
 }

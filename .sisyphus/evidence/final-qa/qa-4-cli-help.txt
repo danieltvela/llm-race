@@ -1,0 +1,34 @@
+usage: python3.14 -m llm_race.bench.cli run [-h] [--provider PROVIDER]
+                                            [--base-url BASE_URL]
+                                            [--model MODEL]
+                                            [--concurrency CONCURRENCY [CONCURRENCY ...]]
+                                            [--prompt-lengths PROMPT_LENGTHS [PROMPT_LENGTHS ...]]
+                                            [--max-tokens MAX_TOKENS]
+                                            [--temperature TEMPERATURE]
+                                            [--top-p TOP_P]
+                                            [--timeout TIMEOUT] [-o OUTPUT]
+                                            [--workload {single-user,chat,multi-agent,high-throughput,stress}]
+                                            [--warmup-iterations WARMUP_ITERATIONS]
+                                            [--measured-iterations MEASURED_ITERATIONS]
+
+options:
+  -h, --help            show this help message and exit
+  --provider PROVIDER   Provider type (vllm, openai, anthropic, ollama, …)
+                        [default: vllm]
+  --base-url BASE_URL
+  --model MODEL
+  --concurrency CONCURRENCY [CONCURRENCY ...]
+  --prompt-lengths PROMPT_LENGTHS [PROMPT_LENGTHS ...]
+  --max-tokens MAX_TOKENS
+  --temperature TEMPERATURE
+  --top-p TOP_P
+  --timeout TIMEOUT
+  -o, --output OUTPUT   CSV output path
+  --workload {single-user,chat,multi-agent,high-throughput,stress}
+                        Workload profile (overrides --concurrency and
+                        --prompt-lengths). Choices: single-user, chat, multi-
+                        agent, high-throughput, stress
+  --warmup-iterations WARMUP_ITERATIONS
+                        Warmup iterations per scenario (default: 2)
+  --measured-iterations MEASURED_ITERATIONS
+                        Measured iterations per scenario (default: 10)
