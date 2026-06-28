@@ -1,0 +1,5 @@
+2026-06-27T20:27:00Z - Task 1 - SystemInfo dataclass init
+
+Command: python -c "from llm_race.utils.system import SystemInfo; ... d = info.to_dict(); print(sorted(d.keys()))"
+Result: ['cpu', 'driver_version', 'gpu', 'gpu_count', 'hostname', 'os', 'os_version', 'python_version', 'ram_gb']
+Status: PASS - All Machine model fields present

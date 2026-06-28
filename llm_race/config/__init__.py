@@ -38,5 +38,19 @@ def create_provider(provider_type: str, **kwargs: Any) -> Provider:
         from llm_race.config.vllm import VLLMProvider
 
         return VLLMProvider(**kwargs)
+    elif provider_type == "lm_studio":
+        from llm_race.config.lm_studio import LMStudioProvider
 
-    raise ValueError(f"Unknown provider: {provider_type!r}. Available: vllm")
+        return LMStudioProvider(**kwargs)
+    elif provider_type == "mlx_lm":
+        from llm_race.config.mlx_lm import MLXLMProvider
+
+        return MLXLMProvider(**kwargs)
+    elif provider_type == "ollama":
+        from llm_race.config.ollama import OllamaProvider
+
+        return OllamaProvider(**kwargs)
+
+    raise ValueError(
+        f"Unknown provider: {provider_type!r}. Available: vllm, lm_studio, mlx_lm, ollama"
+    )

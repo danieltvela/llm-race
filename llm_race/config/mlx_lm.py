@@ -1,13 +1,14 @@
-"""VLLM provider — OpenAI-compatible chat completions API.
+"""MLX-LM provider — OpenAI-compatible chat completions API.
 
-vLLM exposes an API that mirrors the OpenAI chat format with a few
-extensions (e.g. ``stream_options`` for correct token accounting in
-streaming mode, ``reasoning`` field for Qwen3-style models).
+mlx-lm (Apple Silicon optimised) exposes an API that mirrors the OpenAI chat
+format.  It *may* honour ``stream_options.include_usage``; when it does not we
+fall back to client-side token counting (whitespace split).
 """
 
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from dataclasses import asdict
 from typing import Any
@@ -19,18 +20,23 @@ from llm_race.utils.sse import iter_sse_events
 from llm_race.utils.timing import compute_itl_stats
 
 
-class VLLMProvider(Provider):
-    """Provider for vLLM OpenAI-compatible endpoints.
+class MLXLMProvider(Provider):
+    """Provider for mlx-lm OpenAI-compatible endpoints.
 
     Args:
-        base_url: Root URL of the vLLM server (e.g. ``http://localhost:8000/v1``).
-        api_key: Optional API key (Bearer token).
+        base_url: Root URL of the mlx-lm server (default ``http://localhost:8080/v1``).
+        api_key: Optional API key (Bearer token). Falls back to ``MLXLM_API_KEY`` env var.
         timeout: Default HTTP request timeout in seconds.
     """
 
-    def __init__(self, base_url: str, api_key: str | None = None, timeout: int = 120) -> None:
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8080/v1",
+        api_key: str | None = None,
+        timeout: int = 120,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
+        self.api_key = api_key or os.environ.get("MLXLM_API_KEY")
         self.timeout = timeout
 
     async def stream_complete(
@@ -42,7 +48,7 @@ class VLLMProvider(Provider):
         top_p: float = 1.0,
         client: httpx.AsyncClient | None = None,
     ) -> dict[str, Any]:
-        """Send a streaming chat completion via the vLLM API.
+        """Send a streaming chat completion via the mlx-lm API.
 
         Returns a dict with the same keys as ``StreamResult``.
         """
@@ -66,9 +72,12 @@ class VLLMProvider(Provider):
         prev_token_time: float | None = None
         inter_token_times: list[float] = []
         completion_tokens = 0
+        generated_text = ""
+        usage_tokens: int | None = None
 
         async def _do_stream(cl: httpx.AsyncClient) -> None:
             nonlocal ttft, prev_token_time, inter_token_times, completion_tokens
+            nonlocal generated_text, usage_tokens
             async with cl.stream("POST", url, json=payload, headers=headers) as response:
                 if response.status_code != 200:
                     await response.aread()
@@ -76,10 +85,10 @@ class VLLMProvider(Provider):
 
                 async for chunk in iter_sse_events(response):
                     # Extract usage first — it may arrive on a chunk with empty
-                    # choices (vLLM final usage frame).
+                    # choices (OpenAI-compatible final usage frame).
                     usage = chunk.get("usage")
                     if usage:
-                        completion_tokens = usage.get("completion_tokens", completion_tokens)
+                        usage_tokens = usage.get("completion_tokens", usage_tokens)
                         if not chunk.get("choices"):
                             continue
 
@@ -87,9 +96,10 @@ class VLLMProvider(Provider):
                     if not choices:
                         continue
                     delta = choices[0].get("delta", {})
-                    has_content = delta.get("content") or delta.get("reasoning")
+                    content = delta.get("content") or ""
 
-                    if has_content:
+                    if content:
+                        generated_text += content
                         now = time.monotonic()
                         if ttft is None:
                             ttft = now - start
@@ -119,6 +129,14 @@ class VLLMProvider(Provider):
             error_message = None
 
         e2e = time.monotonic() - start
+
+        # Token counting: prefer server-reported usage, fall back to
+        # client-side whitespace counting.
+        if usage_tokens is not None:
+            completion_tokens = usage_tokens
+        elif generated_text:
+            completion_tokens = len(generated_text.split())
+
         itl_stats = compute_itl_stats(inter_token_times)
         tps: float | None = None
         if e2e > 0 and completion_tokens > 0:
@@ -148,7 +166,7 @@ class VLLMProvider(Provider):
         top_p: float = 1.0,
         client: httpx.AsyncClient | None = None,
     ) -> dict[str, Any]:
-        """Send a non-streaming chat completion via the vLLM API.
+        """Send a non-streaming chat completion via the mlx-lm API.
 
         Returns a dict with the same keys as ``StreamResult``.
         """
@@ -182,6 +200,12 @@ class VLLMProvider(Provider):
             usage = data.get("usage")
             if usage:
                 completion_tokens = usage.get("completion_tokens", 0)
+            else:
+                # Fallback: count generated text tokens by whitespace.
+                choices = data.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "")
+                    completion_tokens = len(content.split())
         except (asyncio.TimeoutError, httpx.TimeoutException):
             status = "error"
             error_message = "Timeout"

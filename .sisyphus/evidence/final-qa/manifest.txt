@@ -1,0 +1,13 @@
+total 88
+drwxr-xr-x@ 12 danielvela  staff   384 Jun 27 21:53 .
+drwxr-xr-x@  7 danielvela  staff   224 Jun 27 21:52 ..
+-rw-r--r--@  1 danielvela  staff     3 Jun 27 21:52 scenario-01-imports.txt
+-rw-r--r--@  1 danielvela  staff    56 Jun 27 21:52 scenario-02-tables.txt
+-rw-r--r--@  1 danielvela  staff    17 Jun 27 21:52 scenario-03-relationships.txt
+-rw-r--r--@  1 danielvela  staff    21 Jun 27 21:52 scenario-04-unique-constraint.txt
+-rw-r--r--@  1 danielvela  staff    12 Jun 27 21:52 scenario-05-valid-sql.txt
+-rw-r--r--@  1 danielvela  staff    47 Jun 27 21:52 scenario-06-tables.txt
+-rw-r--r--@  1 danielvela  staff    62 Jun 27 21:52 scenario-07-schema-match.txt
+-rw-r--r--@  1 danielvela  staff  5127 Jun 27 21:53 scenario-08-pytest.txt
+-rw-r--r--@  1 danielvela  staff    77 Jun 27 21:53 scenario-09-integration.txt
+-rw-r--r--@  1 danielvela  staff   484 Jun 27 21:53 scenario-10-scope.txt

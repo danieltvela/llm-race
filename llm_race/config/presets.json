@@ -1,0 +1,68 @@
+{
+    "presets": [
+        {
+            "name": "Qwen3-8B on vLLM",
+            "provider": "vllm",
+            "model": "Qwen3-8B",
+            "base_url": "http://localhost:8000/v1",
+            "api_key_env": "VLLM_API_KEY",
+            "description": "Fast local inference for Qwen3-8B using vLLM with PagedAttention"
+        },
+        {
+            "name": "Qwen3-27B-FP8 on vLLM",
+            "provider": "vllm",
+            "model": "Qwen3-27B-FP8",
+            "base_url": "http://localhost:8000/v1",
+            "api_key_env": "VLLM_API_KEY",
+            "description": "FP8 quantized Qwen3-27B for memory-efficient large model benchmarking"
+        },
+        {
+            "name": "Llama-3.2-3B on LM Studio",
+            "provider": "lm_studio",
+            "model": "llama-3.2-3b",
+            "base_url": "http://localhost:1234/v1",
+            "api_key_env": "LMSTUDIO_API_KEY",
+            "description": "Lightweight Llama 3.2 for quick local benchmarking via LM Studio server"
+        },
+        {
+            "name": "Mistral-7B on LM Studio",
+            "provider": "lm_studio",
+            "model": "mistral-7b",
+            "base_url": "http://localhost:1234/v1",
+            "api_key_env": "LMSTUDIO_API_KEY",
+            "description": "Mistral 7B for mid-size model comparison on LM Studio"
+        },
+        {
+            "name": "Llama-3.2-3B on MLX",
+            "provider": "mlx_lm",
+            "model": "mlx-community/Llama-3.2-3B",
+            "base_url": "http://localhost:8080/v1",
+            "api_key_env": "MLXLM_API_KEY",
+            "description": "Apple Silicon optimized Llama 3.2 using MLX framework server"
+        },
+        {
+            "name": "Mistral-7B on MLX",
+            "provider": "mlx_lm",
+            "model": "mlx-community/Mistral-7B",
+            "base_url": "http://localhost:8080/v1",
+            "api_key_env": "MLXLM_API_KEY",
+            "description": "Mistral 7B running on Apple Silicon via MLX for native GPU acceleration"
+        },
+        {
+            "name": "Llama3.2 via Ollama",
+            "provider": "ollama",
+            "model": "llama3.2",
+            "base_url": "http://localhost:11434/v1",
+            "api_key_env": "OLLAMA_API_KEY",
+            "description": "Llama 3.2 served through Ollama for simple local benchmarking"
+        },
+        {
+            "name": "Mistral via Ollama",
+            "provider": "ollama",
+            "model": "mistral",
+            "base_url": "http://localhost:11434/v1",
+            "api_key_env": "OLLAMA_API_KEY",
+            "description": "Mistral served through Ollama for lightweight model comparison"
+        }
+    ]
+}

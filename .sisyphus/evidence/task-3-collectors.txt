@@ -1,0 +1,9 @@
+2026-06-27T20:30:00Z - Task 3 - All collector functions
+
+Commands verified:
+- _get_os_info() → {'os': 'Darwin', 'os_version': '26.5.1', 'os_kernel': '25.5.0', 'python_version': '3.14.5'} ✅
+- _get_cpu_info() → {'cpu': 'arm', 'cpu_cores': 14, 'cpu_threads': 14, 'cpu_architecture': 'arm64'} ✅
+- _get_ram_info() → {'ram_total_gb': 64.0, 'ram_available_gb': 29.07} ✅
+- _get_network_info() → {'hostname': 'mac-mini.local', 'ip_local': '127.0.0.1'} ✅
+- _get_gpu_info() → {'gpu': 'Apple M4 Pro', ...} (graceful, no double prefix) ✅
+Status: PASS

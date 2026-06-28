@@ -1,0 +1,8 @@
+2026-06-27T20:31:00Z - Task 4 - collect_system_info orchestrator
+
+collect_system_info(): hostname=mac-mini.local cpu=arm os=Darwin ram=64.0GB python=3.14.5 ✅
+Cache test (same object on repeated call): True ✅
+Force test (new object on force=True): False ✅
+to_dict keys: ['cpu', 'driver_version', 'gpu', 'gpu_count', 'hostname', 'os', 'os_version', 'python_version', 'ram_gb'] ✅
+to_dict maps to Machine model: 9 fields matching ORM columns ✅
+Status: PASS

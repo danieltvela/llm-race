@@ -1,0 +1,5 @@
+2026-06-27T20:32:00Z - Task 6 - Integration smoke test
+
+Command: ./.venv/bin/python -c "from llm_race.utils.system import get_system_info; info = get_system_info(force=True); print(f'hostname={info.hostname} os={info.os} python={info.python_version} ram={info.ram_total_gb}GB')"
+Result: hostname=mac-mini.local os=Darwin python=3.14.5 ram=64.0GB
+Status: PASS

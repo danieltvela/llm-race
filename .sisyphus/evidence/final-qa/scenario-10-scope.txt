@@ -1,0 +1,17 @@
+ M llm_race/db/__init__.py
+ M llm_race/db/models.py
+ M llm_race/db/schema.sql
+?? .sisyphus/boulder.json
+?? .sisyphus/evidence/final-qa/
+?? .sisyphus/evidence/task-1/
+?? .sisyphus/evidence/task-2/
+?? .sisyphus/evidence/task-3/
+?? .sisyphus/notepads/
+?? .sisyphus/plans/
+?? .sisyphus/run-continuation/ses_0f56644caffeg2DqkxOMo307Kc.json
+?? .sisyphus/run-continuation/ses_0f56d96faffeB2IRWiA14ZVPRO.json
+?? tests/
+---
+llm_race/db/__init__.py
+llm_race/db/models.py
+llm_race/db/schema.sql

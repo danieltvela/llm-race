@@ -1,0 +1,49 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.1.1, pluggy-1.6.0 -- /Users/danielvela/projects/ai/llm-race/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/danielvela/projects/ai/llm-race
+plugins: anyio-4.14.1
+collecting ... collected 14 items
+
+tests/test_models.py::test_init_db_creates_tables PASSED                 [  7%]
+tests/test_models.py::test_create_model PASSED                           [ 14%]
+tests/test_models.py::test_model_unique_constraint PASSED                [ 21%]
+tests/test_models.py::test_create_machine PASSED                         [ 28%]
+tests/test_models.py::test_machine_unique_constraint PASSED              [ 35%]
+tests/test_models.py::test_create_benchmark PASSED                       [ 42%]
+tests/test_models.py::test_benchmark_run_id_uuid PASSED                  [ 50%]
+tests/test_models.py::test_benchmark_defaults PASSED                     [ 57%]
+tests/test_models.py::test_create_result PASSED                          [ 64%]
+tests/test_models.py::test_result_unique_constraint PASSED               [ 71%]
+tests/test_models.py::test_result_defaults PASSED                        [ 78%]
+tests/test_models.py::test_model_benchmark_relationship PASSED           [ 85%]
+tests/test_models.py::test_machine_benchmark_relationship PASSED         [ 92%]
+tests/test_models.py::test_benchmark_result_relationship PASSED          [100%]
+
+=============================== warnings summary ===============================
+tests/test_models.py: 42 warnings
+  /Users/danielvela/projects/ai/llm-race/.venv/lib/python3.14/site-packages/sqlalchemy/sql/schema.py:3623: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+tests/test_models.py::test_create_benchmark
+tests/test_models.py::test_create_result
+tests/test_models.py::test_result_unique_constraint
+tests/test_models.py::test_result_defaults
+tests/test_models.py::test_model_benchmark_relationship
+tests/test_models.py::test_model_benchmark_relationship
+tests/test_models.py::test_machine_benchmark_relationship
+tests/test_models.py::test_machine_benchmark_relationship
+tests/test_models.py::test_benchmark_result_relationship
+  /Users/danielvela/projects/ai/llm-race/tests/test_models.py:90: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    started_at=datetime.utcnow(),
+
+tests/test_models.py::test_benchmark_run_id_uuid
+  /Users/danielvela/projects/ai/llm-race/tests/test_models.py:237: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    started_at=datetime.utcnow(),
+
+tests/test_models.py::test_benchmark_defaults
+  /Users/danielvela/projects/ai/llm-race/tests/test_models.py:261: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    started_at=datetime.utcnow(),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================= 14 passed, 53 warnings in 0.18s ========================

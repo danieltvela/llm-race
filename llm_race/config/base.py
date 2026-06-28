@@ -1,7 +1,7 @@
 """Abstract provider interface for LLM Race.
 
-Every LLM provider implements Provider.stream_complete() and returns
-a dict with StreamResult fields (produced via asdict(StreamResult(...))).
+Every LLM provider implements Provider.complete() and/or Provider.stream_complete(),
+both returning a dict with StreamResult fields (produced via asdict(StreamResult(...))).
 """
 
 from __future__ import annotations
@@ -51,6 +51,23 @@ class Provider(ABC):
         client: httpx.AsyncClient | None = None,
     ) -> dict[str, Any]:
         """Send a streaming completion and return normalized metrics.
+
+        Returns:
+            A dict with the same keys as StreamResult. Build via
+            ``asdict(StreamResult(...))``.
+        """
+
+    @abstractmethod
+    async def complete(
+        self,
+        model: str,
+        messages: list[dict],
+        max_tokens: int = 256,
+        temperature: float = 0.0,
+        top_p: float = 1.0,
+        client: httpx.AsyncClient | None = None,
+    ) -> dict[str, Any]:
+        """Send a non-streaming completion and return normalized metrics.
 
         Returns:
             A dict with the same keys as StreamResult. Build via
