@@ -8,6 +8,7 @@ streaming mode, ``reasoning`` field for Qwen3-style models).
 from __future__ import annotations
 
 import asyncio
+import os
 import time
 from dataclasses import asdict
 from typing import Any
@@ -30,7 +31,7 @@ class VLLMProvider(Provider):
 
     def __init__(self, base_url: str, api_key: str | None = None, timeout: int = 120) -> None:
         self.base_url = base_url.rstrip("/")
-        self.api_key = api_key
+        self.api_key = api_key or os.environ.get("VLLM_API_KEY")
         self.timeout = timeout
 
     async def stream_complete(

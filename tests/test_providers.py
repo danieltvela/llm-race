@@ -808,3 +808,31 @@ class TestMLXLMProvider:
         with patch.dict(os.environ, {"MLXLM_API_KEY": "env-key"}):
             provider = MLXLMProvider(api_key="explicit-key")
             assert provider.api_key == "explicit-key"
+
+
+# ---------------------------------------------------------------------------
+# Tests: VLLMProvider env var fallback
+# ---------------------------------------------------------------------------
+
+
+class TestVLLMProviderEnvVars:
+    """Tests for VLLMProvider VLLM_API_KEY env var fallback."""
+
+    def test_env_var_fallback(self) -> None:
+        """VLLM_API_KEY set in env -> provider reads it."""
+        with patch.dict(os.environ, {"VLLM_API_KEY": "env-key"}):
+            provider = VLLMProvider(base_url="http://localhost:8000/v1")
+            assert provider.api_key == "env-key"
+            assert provider.base_url == "http://localhost:8000/v1"
+
+    def test_explicit_key_overrides_env(self) -> None:
+        """Explicit api_key param takes priority over env var."""
+        with patch.dict(os.environ, {"VLLM_API_KEY": "env-key"}):
+            provider = VLLMProvider(base_url="http://localhost:8000/v1", api_key="explicit")
+            assert provider.api_key == "explicit"
+
+    def test_no_env_var_returns_none(self) -> None:
+        """No VLLM_API_KEY env var -> api_key is None."""
+        with patch.dict(os.environ, {}, clear=True):
+            provider = VLLMProvider(base_url="http://localhost:8000/v1")
+            assert provider.api_key is None
