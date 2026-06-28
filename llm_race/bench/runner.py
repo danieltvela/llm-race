@@ -235,6 +235,7 @@ async def run_benchmarks(
     temperature: float = 0.0,
     top_p: float = 1.0,
     output: str | None = None,
+    workload_profile: str | None = None,
 ) -> list[ScenarioResult]:
     """Run the full benchmark suite across all concurrency × prompt combinations.
 
@@ -261,6 +262,8 @@ async def run_benchmarks(
     logger.info("  Concurrency:    %s", concurrency)
     logger.info("  Prompt lengths: %s", prompt_lengths)
     logger.info("  Max tokens:     %d", max_tokens)
+    if workload_profile:
+        logger.info("  Workload profile: %s", workload_profile)
     logger.info("=" * 80)
 
     all_results: list[ScenarioResult] = []

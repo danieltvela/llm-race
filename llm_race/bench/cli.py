@@ -2,8 +2,10 @@
 
 import argparse
 import asyncio
+import logging
 
 from llm_race.bench.runner import run_benchmarks
+from llm_race.bench.workloads import WORKLOAD_REGISTRY, get_workload
 from llm_race.config import (
     DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
@@ -41,8 +43,25 @@ def main() -> None:
     run_parser.add_argument("--top-p", type=float, default=DEFAULT_TOP_P)
     run_parser.add_argument("--timeout", type=int, default=DEFAULT_REQUEST_TIMEOUT)
     run_parser.add_argument("-o", "--output", default=None, help="CSV output path")
+    run_parser.add_argument(
+        "--workload",
+        choices=list(WORKLOAD_REGISTRY.keys()),
+        default=None,
+        help="Workload profile (overrides --concurrency and --prompt-lengths). Choices: %(choices)s",
+    )
 
     args = parser.parse_args()
+    logger = logging.getLogger(__name__)
+
+    # Resolve concurrency and prompt_lengths from workload profile if set.
+    if args.workload:
+        profile = get_workload(args.workload)
+        logger.info("Using workload profile: %s (%s)", profile.name, profile.description)
+        concurrency = profile.concurrency_levels
+        prompt_lengths = profile.default_prompt_lengths
+    else:
+        concurrency = args.concurrency
+        prompt_lengths = args.prompt_lengths
 
     # Pass provider-specific kwargs. For vLLM only base-url and timeout
     # are relevant; other providers will need different extras in the future.
@@ -56,8 +75,8 @@ def main() -> None:
         run_benchmarks(
             provider=provider,
             model=args.model,
-            concurrency=args.concurrency,
-            prompt_lengths=args.prompt_lengths,
+            concurrency=concurrency,
+            prompt_lengths=prompt_lengths,
             max_tokens=args.max_tokens,
             temperature=args.temperature,
             top_p=args.top_p,
