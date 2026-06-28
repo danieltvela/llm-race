@@ -16,6 +16,7 @@ from typing import Any, Optional
 import httpx
 
 from llm_race.bench.prompts import SYSTEM_PROMPT, generate_prompt
+from llm_race.config import DEFAULT_MEASURED_ITERATIONS, DEFAULT_WARMUP_ITERATIONS
 from llm_race.config.base import Provider
 from llm_race.utils.reporter import format_table, save_csv, save_json
 from llm_race.utils.timing import compute_itl_stats, compute_latency_stats
@@ -76,21 +77,25 @@ async def run_scenario(
     temperature: float,
     top_p: float,
     limits: httpx.Limits | None = None,
+    warmup_iterations: int = DEFAULT_WARMUP_ITERATIONS,
+    measured_iterations: int = DEFAULT_MEASURED_ITERATIONS,
 ) -> list[RequestMetrics]:
-    """Execute *concurrency* parallel streaming requests and collect metrics.
+    """Execute warmup then measured iterations of parallel streaming requests.
 
     Args:
         provider: Any ``Provider`` subclass.
         model: Model identifier (e.g. ``"Qwen3.6-35B-A3B-FP8"``).
-        concurrency: Number of simultaneous requests.
+        concurrency: Number of simultaneous requests per batch.
         prompt_length: Target prompt token count.
         max_tokens: Max completion tokens per request.
         temperature: Sampling temperature.
         top_p: Nucleus sampling threshold.
         limits: Optional ``httpx.Limits`` for connection pooling.
+        warmup_iterations: Number of warmup batches to run and discard.
+        measured_iterations: Number of measured batches to run and collect.
 
     Returns:
-        List of ``RequestMetrics``, one per request.
+        List of ``RequestMetrics`` from all measured batches.
     """
     prompt = generate_prompt(prompt_length)
     messages: list[dict[str, Any]] = [
@@ -98,9 +103,19 @@ async def run_scenario(
         {"role": "user", "content": prompt},
     ]
 
-    logger.info("Starting scenario concurrency=%d prompt_length=%d", concurrency, prompt_length)
+    logger.info(
+        "Starting scenario concurrency=%d prompt_length=%d warmup=%d measured=%d",
+        concurrency,
+        prompt_length,
+        warmup_iterations,
+        measured_iterations,
+    )
 
-    async def _run_with_client(client: httpx.AsyncClient) -> list[RequestMetrics]:
+    if measured_iterations == 0:
+        logger.warning("measured_iterations is 0, returning empty results")
+        return []
+
+    async def _run_batch(client: httpx.AsyncClient) -> list[RequestMetrics]:
         coros = [
             provider.stream_complete(
                 model=model,
@@ -152,19 +167,39 @@ async def run_scenario(
 
         return metrics_list
 
+    async def _run_all(client: httpx.AsyncClient) -> list[RequestMetrics]:
+        for i in range(warmup_iterations):
+            batch = await _run_batch(client)
+            failed = [m for m in batch if m.status == "error"]
+            for m in failed:
+                logger.warning("Request failed during warmup: %s", m.error_message)
+            logger.info("Warmup iteration %d/%d complete", i + 1, warmup_iterations)
+
+        all_metrics: list[RequestMetrics] = []
+        for i in range(measured_iterations):
+            batch = await _run_batch(client)
+            for j, m in enumerate(batch):
+                m.request_id = len(all_metrics) + j
+            all_metrics.extend(batch)
+            logger.info("Measured iteration %d/%d complete", i + 1, measured_iterations)
+
+        return all_metrics
+
     if limits is not None:
         async with httpx.AsyncClient(limits=limits, timeout=provider.timeout) as client:
-            metrics = await _run_with_client(client)
+            metrics = await _run_all(client)
     else:
         async with httpx.AsyncClient() as client:
-            metrics = await _run_with_client(client)
+            metrics = await _run_all(client)
 
     logger.info(
-        "Scenario completed concurrency=%d prompt_length=%d success=%d/%d",
+        "Scenario completed concurrency=%d prompt_length=%d success=%d/%d (warmup=%d measured=%d)",
         concurrency,
         prompt_length,
         sum(1 for m in metrics if m.status == "success"),
         len(metrics),
+        warmup_iterations,
+        measured_iterations,
     )
     return metrics
 
@@ -236,6 +271,8 @@ async def run_benchmarks(
     top_p: float = 1.0,
     output: str | None = None,
     workload_profile: str | None = None,
+    warmup_iterations: int = DEFAULT_WARMUP_ITERATIONS,
+    measured_iterations: int = DEFAULT_MEASURED_ITERATIONS,
 ) -> list[ScenarioResult]:
     """Run the full benchmark suite across all concurrency × prompt combinations.
 
@@ -248,6 +285,8 @@ async def run_benchmarks(
         temperature: Sampling temperature.
         top_p: Nucleus sampling threshold.
         output: Optional CSV output path.
+        warmup_iterations: Number of warmup batches per scenario.
+        measured_iterations: Number of measured batches per scenario.
 
     Returns:
         List of ``ScenarioResult``, one per combination.
@@ -262,6 +301,8 @@ async def run_benchmarks(
     logger.info("  Concurrency:    %s", concurrency)
     logger.info("  Prompt lengths: %s", prompt_lengths)
     logger.info("  Max tokens:     %d", max_tokens)
+    logger.info("  Warmup iters:   %d", warmup_iterations)
+    logger.info("  Measured iters: %d", measured_iterations)
     if workload_profile:
         logger.info("  Workload profile: %s", workload_profile)
     logger.info("=" * 80)
@@ -278,6 +319,8 @@ async def run_benchmarks(
                 max_tokens=max_tokens,
                 temperature=temperature,
                 top_p=top_p,
+                warmup_iterations=warmup_iterations,
+                measured_iterations=measured_iterations,
             )
             wall_elapsed = time.monotonic() - wall_start
 
