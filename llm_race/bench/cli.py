@@ -10,12 +10,14 @@ from llm_race.config import (
     DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
     DEFAULT_MAX_TOKENS,
+    DEFAULT_MEASURED_ITERATIONS,
     DEFAULT_MODEL,
     DEFAULT_PROMPT_LENGTHS,
     DEFAULT_PROVIDER,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_P,
+    DEFAULT_WARMUP_ITERATIONS,
     create_provider,
 )
 
@@ -48,6 +50,18 @@ def main() -> None:
         choices=list(WORKLOAD_REGISTRY.keys()),
         default=None,
         help="Workload profile (overrides --concurrency and --prompt-lengths). Choices: %(choices)s",
+    )
+    run_parser.add_argument(
+        "--warmup-iterations",
+        type=int,
+        default=DEFAULT_WARMUP_ITERATIONS,
+        help="Warmup iterations per scenario (default: %(default)s)",
+    )
+    run_parser.add_argument(
+        "--measured-iterations",
+        type=int,
+        default=DEFAULT_MEASURED_ITERATIONS,
+        help="Measured iterations per scenario (default: %(default)s)",
     )
 
     args = parser.parse_args()
@@ -82,6 +96,8 @@ def main() -> None:
             top_p=args.top_p,
             output=args.output,
             workload_profile=args.workload,
+            warmup_iterations=args.warmup_iterations,
+            measured_iterations=args.measured_iterations,
         )
     )
 
