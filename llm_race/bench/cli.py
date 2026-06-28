@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import logging
+import uuid
 
 from llm_race.bench.runner import run_benchmarks
 from llm_race.bench.workloads import WORKLOAD_REGISTRY, get_workload
@@ -20,6 +21,7 @@ from llm_race.config import (
     DEFAULT_WARMUP_ITERATIONS,
     create_provider,
 )
+from llm_race.utils.system import collect_system_info
 
 
 def main() -> None:
@@ -63,6 +65,16 @@ def main() -> None:
         default=DEFAULT_MEASURED_ITERATIONS,
         help="Measured iterations per scenario (default: %(default)s)",
     )
+    run_parser.add_argument(
+        "--no-db",
+        action="store_true",
+        help="Skip saving results to the database",
+    )
+    run_parser.add_argument(
+        "--force-detect",
+        action="store_true",
+        help="Re-collect machine info even if cached (not yet cached)",
+    )
 
     args = parser.parse_args()
     logger = logging.getLogger(__name__)
@@ -85,6 +97,20 @@ def main() -> None:
 
     provider = create_provider(args.provider, **provider_kwargs)
 
+    run_id = str(uuid.uuid4())
+    if args.no_db:
+        system_info = None
+        provider_type = None
+        effective_run_id = None
+    else:
+        system_info = collect_system_info().to_dict()
+        provider_type = args.provider
+        effective_run_id = run_id
+
+    # Note: --force-detect is accepted but currently a no-op.
+    # System info is collected fresh each run; caching will be added
+    # when needed to avoid repeated nvidia-smi calls.
+
     asyncio.run(
         run_benchmarks(
             provider=provider,
@@ -98,6 +124,9 @@ def main() -> None:
             workload_profile=args.workload,
             warmup_iterations=args.warmup_iterations,
             measured_iterations=args.measured_iterations,
+            run_id=effective_run_id,
+            system_info=system_info,
+            provider_type=provider_type,
         )
     )
 

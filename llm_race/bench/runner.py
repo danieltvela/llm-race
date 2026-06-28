@@ -273,6 +273,10 @@ async def run_benchmarks(
     workload_profile: str | None = None,
     warmup_iterations: int = DEFAULT_WARMUP_ITERATIONS,
     measured_iterations: int = DEFAULT_MEASURED_ITERATIONS,
+    *,
+    run_id: str | None = None,
+    system_info: dict[str, Any] | None = None,
+    provider_type: str | None = None,
 ) -> list[ScenarioResult]:
     """Run the full benchmark suite across all concurrency × prompt combinations.
 
@@ -287,6 +291,9 @@ async def run_benchmarks(
         output: Optional CSV output path.
         warmup_iterations: Number of warmup batches per scenario.
         measured_iterations: Number of measured batches per scenario.
+        run_id: Unique run identifier. When provided, results are saved to DB.
+        system_info: Dict from SystemInfo.to_dict(). Required when run_id is set.
+        provider_type: Provider string (e.g. "vllm"). Required when run_id is set.
 
     Returns:
         List of ``ScenarioResult``, one per combination.
@@ -308,8 +315,11 @@ async def run_benchmarks(
     logger.info("=" * 80)
 
     all_results: list[ScenarioResult] = []
+    all_scenario_metrics: list[list[RequestMetrics]] = []
+    all_started_at: list[datetime] = []
     for prompt_len in prompt_lengths:
         for conc in concurrency:
+            started_at = datetime.utcnow()
             wall_start = time.monotonic()
             metrics = await run_scenario(
                 provider=provider,
@@ -326,6 +336,8 @@ async def run_benchmarks(
 
             scenario = _build_scenario_result(metrics, conc, prompt_len, wall_elapsed)
             all_results.append(scenario)
+            all_scenario_metrics.append(metrics)
+            all_started_at.append(started_at)
 
     print("\n" + format_table(all_results))
 
@@ -335,5 +347,31 @@ async def run_benchmarks(
     logger.info("Results saved to %s", output)
 
     save_json(all_results, f"benchmark_{ts}.json")
+
+    # Persist to database.
+    if run_id is not None and system_info is not None and provider_type is not None:
+        try:
+            from llm_race.db.models import init_db
+            from llm_race.db.saver import save_benchmark_run
+
+            engine, session_factory = init_db()
+            with session_factory() as session:
+                save_benchmark_run(
+                    session=session,
+                    run_id=run_id,
+                    provider_type=provider_type,
+                    model_name=model,
+                    workload_profile=workload_profile,
+                    system_info=system_info,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    top_p=top_p,
+                    scenarios=[
+                        (sr, metrics, started)
+                        for sr, metrics, started in zip(all_results, all_scenario_metrics, all_started_at)
+                    ],
+                )
+        except Exception:
+            logger.warning("Failed to save benchmark results to DB", exc_info=True)
 
     return all_results
