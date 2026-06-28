@@ -81,6 +81,7 @@ def main() -> None:
             temperature=args.temperature,
             top_p=args.top_p,
             output=args.output,
+            workload_profile=args.workload,
         )
     )
 
