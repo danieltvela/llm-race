@@ -51,8 +51,8 @@ CHAT: Final = WorkloadProfile(
 MULTI_AGENT: Final = WorkloadProfile(
     name="multi-agent",
     description="Multiple independent agents running in parallel",
-    concurrency_levels=[1, 4],
-    default_prompt_lengths=[256, 1024],
+    concurrency_levels=[2, 8],
+    default_prompt_lengths=[512, 2048],
     behavior="independent parallel agents (user queries + tool context)",
 )
 
