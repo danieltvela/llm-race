@@ -123,6 +123,18 @@ def save_benchmark_run(
             itl_mean_ms=_to_ms(scenario.itl_mean),
             itl_p50_ms=_to_ms(scenario.itl_p50),
             itl_p90_ms=_to_ms(scenario.itl_p95),
+            pp_mean=(
+                round(scenario.pp_mean, 2) if scenario.pp_mean else None
+            ),
+            pp_p50=(
+                round(scenario.pp_p50, 2) if scenario.pp_p50 else None
+            ),
+            pp_p90=(
+                round(scenario.pp_p95, 2) if scenario.pp_p95 else None
+            ),
+            pp_p99=(
+                round(scenario.pp_p99, 2) if scenario.pp_p99 else None
+            ),
             status=(
                 "success" if scenario.failed_requests == 0 else (
                     "partial" if scenario.successful_requests > 0 else "error"
@@ -151,6 +163,9 @@ def save_benchmark_run(
                 completion_tokens=metrics.completion_tokens,
                 total_tokens=metrics.total_tokens,
                 tokens_per_second=metrics.tokens_per_second,
+                pp=(
+                    round(metrics.pp, 2) if metrics.pp else None
+                ),
                 itl_mean=_to_ms(itl_mean),
             )
             session.add(result)

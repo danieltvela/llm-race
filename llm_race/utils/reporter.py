@@ -17,7 +17,7 @@ def format_table(results: list["ScenarioResult"]) -> str:
         f"{'Wall(s)':>9} | {'RPS':>8} | {'TPS':>10} | "
         f"{'TTFT p50':>11} | {'TTFT p95':>11} | "
         f"{'E2E p50':>9} | {'E2E p95':>9} | "
-        f"{'ITL p50':>9}"
+        f"{'PP p50':>9} | {'ITL p50':>9}"
     )
     sep = "-" * len(header)
     lines = [header, sep]
@@ -33,6 +33,7 @@ def format_table(results: list["ScenarioResult"]) -> str:
             f"{r.ttft_p95*1000:>11.0f}ms | "
             f"{r.e2e_p50:>9.3f}s | "
             f"{r.e2e_p95:>9.3f}s | "
+            f"{r.pp_p50:>9.0f} | "
             f"{r.itl_p50*1000:>9.0f}ms"
         )
         lines.append(row)
@@ -48,6 +49,7 @@ def save_csv(results: list["ScenarioResult"], path: str) -> None:
         "failed_requests", "wall_clock_seconds", "throughput_rps", "throughput_tps",
         "ttft_mean", "ttft_p50", "ttft_p95", "ttft_p99",
         "e2e_mean", "e2e_p50", "e2e_p95", "e2e_p99", "e2e_max",
+        "pp_mean", "pp_p50", "pp_p95", "pp_p99",
         "itl_mean", "itl_p50", "itl_p95",
     ]
     with open(path, "w", newline="") as f:

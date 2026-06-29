@@ -21,7 +21,7 @@ class WorkloadProfile:
         name: Unique identifier used in DB and CLI.
         description: Human-readable explanation of the workload.
         concurrency_levels: List of concurrent request counts to test.
-        default_prompt_lengths: Prompt token lengths to test (from config).
+        default_prompt_lengths: Prompt token lengths for this workload.
         behavior: Short description of the access pattern.
     """
 
@@ -36,27 +36,31 @@ SINGLE_USER: Final = WorkloadProfile(
     name="single-user",
     description="Single request, measure raw latency",
     concurrency_levels=[1],
+    default_prompt_lengths=[64, 4096],
     behavior="single request",
 )
 
 CHAT: Final = WorkloadProfile(
     name="chat",
-    description="Conversational flow with context growth",
+    description="Conversational flow with short context exchanges",
     concurrency_levels=[1],
-    behavior="conversational (context growth not simulated yet)",
+    default_prompt_lengths=[128],
+    behavior="conversational (short user messages)",
 )
 
 MULTI_AGENT: Final = WorkloadProfile(
     name="multi-agent",
     description="Multiple independent agents running in parallel",
-    concurrency_levels=[4, 8, 16],
-    behavior="independent parallel agents",
+    concurrency_levels=[4, 12],
+    default_prompt_lengths=[256, 4096],
+    behavior="independent parallel agents (user queries + tool context)",
 )
 
 HIGH_THROUGHPUT: Final = WorkloadProfile(
     name="high-throughput",
     description="Many users hitting the endpoint simultaneously",
     concurrency_levels=[32, 64, 128],
+    default_prompt_lengths=[64, 256, 1024],
     behavior="constant concurrent load",
 )
 
@@ -64,6 +68,7 @@ STRESS: Final = WorkloadProfile(
     name="stress",
     description="Maximum concurrency until degradation",
     concurrency_levels=[256, 512],
+    default_prompt_lengths=[1024, 4096],
     behavior="degradation testing",
 )
 

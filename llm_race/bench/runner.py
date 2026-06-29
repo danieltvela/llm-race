@@ -40,6 +40,7 @@ class RequestMetrics:
     completion_tokens: int = 0
     total_tokens: int = 0
     tokens_per_second: Optional[float] = None
+    pp: Optional[float] = None
 
 
 @dataclass
@@ -66,6 +67,10 @@ class ScenarioResult:
     itl_p50: float = 0.0
     itl_p95: float = 0.0
     wall_clock_seconds: float = 0.0
+    pp_mean: float = 0.0
+    pp_p50: float = 0.0
+    pp_p95: float = 0.0
+    pp_p99: float = 0.0
 
 
 async def run_scenario(
@@ -164,6 +169,7 @@ async def run_scenario(
                 completion_tokens=completion_tokens,
                 total_tokens=result.get("prompt_length", 0) + completion_tokens,
                 tokens_per_second=tokens_per_second,
+                pp=result.get("pp"),
             )
             metrics_list.append(metrics)
 
@@ -261,6 +267,14 @@ def _build_scenario_result(
         result.itl_mean = itl_stats["mean"] or 0.0
         result.itl_p50 = itl_stats["p50"] or 0.0
         result.itl_p95 = itl_stats["p95"] or 0.0
+
+        pp_vals = [m.pp for m in success if m.pp is not None]
+        if pp_vals:
+            pp_stats = compute_latency_stats(pp_vals)
+            result.pp_mean = pp_stats["mean"]
+            result.pp_p50 = pp_stats["p50"]
+            result.pp_p95 = pp_stats["p95"]
+            result.pp_p99 = pp_stats["p99"]
 
     return result
 

@@ -29,6 +29,7 @@ class StreamResult:
     itl_p95: float | None
     itl_p99: float | None
     prompt_length: int
+    pp: float | None = None
 
 
 class Provider(ABC):

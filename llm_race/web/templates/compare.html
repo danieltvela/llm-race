@@ -76,6 +76,7 @@
         data: {{ chart_data|tojson }},
         options: {
             responsive: true,
+            indexAxis: 'y',
             plugins: {
                 legend: { position: 'top' },
                 title: { display: true, text: 'Performance Metrics Comparison' }

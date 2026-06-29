@@ -26,7 +26,7 @@
         <label for="metric">Metric</label>
         <select id="metric" name="metric">
             {% for m in metric_options %}
-            <option value="{{ m }}" {% if selected_metric == m %}selected{% endif %}>{{ m }}</option>
+            <option value="{{ m }}" {% if selected_metric == m %}selected{% endif %}>{{ metric_labels.get(m, m) }}</option>
             {% endfor %}
         </select>
     </div>

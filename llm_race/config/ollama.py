@@ -124,6 +124,7 @@ class OllamaProvider(Provider):
         tps: float | None = None
         if e2e > 0 and completion_tokens > 0:
             tps = completion_tokens / e2e
+        pp: float | None = prompt_length / ttft if ttft and ttft > 0 and prompt_length > 0 else None
 
         return asdict(
             StreamResult(
@@ -139,6 +140,7 @@ class OllamaProvider(Provider):
                 itl_p95=itl_stats["p95"],
                 itl_p99=itl_stats["p99"],
                 prompt_length=prompt_length,
+                pp=pp,
             )
         )
 
@@ -223,5 +225,6 @@ class OllamaProvider(Provider):
                 itl_p95=None,
                 itl_p99=None,
                 prompt_length=prompt_length,
+                pp=None,
             )
         )

@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+{% block title %}About Benchmarks — LLM Race{% endblock %}
+{% block head_extra %}
+<style>
+  .docs-section { margin-bottom: 2rem; }
+  .docs-section h2 {
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid var(--accent);
+  }
+  .docs-section h3 {
+    font-size: 1.1rem;
+    margin: 1.25rem 0 0.5rem;
+    color: var(--accent);
+  }
+  .docs-section p, .docs-section li {
+    color: var(--text-secondary);
+    line-height: 1.7;
+  }
+  .docs-section ul, .docs-section ol {
+    padding-left: 1.25rem;
+    margin: 0.5rem 0 1rem;
+  }
+  .docs-section li { margin-bottom: 0.3rem; }
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .metric-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    transition: var(--transition);
+  }
+  .metric-card h4 {
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+    color: var(--text-primary);
+  }
+  .metric-card p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+  .metric-card .metric-formula {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    background: rgba(79, 195, 247, 0.1);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+  .workload-table { margin: 1rem 0; }
+  .workload-table td:first-child {
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--accent);
+  }
+  .workload-table td:last-child {
+    color: var(--text-secondary);
+  }
+  .badge-doc {
+    display: inline-block;
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 600;
+    margin-right: 0.25rem;
+  }
+  .badge-doc.conc { background: rgba(79, 195, 247, 0.2); color: var(--accent); }
+  .badge-doc.beh  { background: rgba(102, 187, 106, 0.2); color: var(--success); }
+</style>
+{% endblock %}
+{% block content %}
+<h1>About Benchmarks</h1>
+<p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+  How LLM Race measures and reports LLM inference performance.
+</p>
+
+<div class="docs-section">
+  <h2>Overview</h2>
+  <p>
+    LLM Race is a benchmarking tool that measures the performance of Large Language Models
+    across different providers, hardware configurations, and usage patterns. Each benchmark
+    <strong>run</strong> consists of one or more <strong>scenarios</strong> — combinations of
+    concurrency level and prompt size that simulate real-world usage. The tool collects
+    per-request timing data and aggregates it into meaningful metrics for comparison.
+  </p>
+</div>
+
+<div class="docs-section">
+  <h2>Workload Profiles</h2>
+  <p>
+    A workload profile defines a set of concurrency levels and prompt sizes that represent
+    a realistic usage pattern. Each profile is designed to stress the model in a different way.
+  </p>
+  <table class="table workload-table">
+    <thead>
+      <tr>
+        <th>Profile</th>
+        <th>Description</th>
+        <th>Concurrency</th>
+        <th>Prompt Sizes (tokens)</th>
+        <th>Behavior</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>single-user</td>
+        <td>Single request, measure raw latency</td>
+        <td><span class="badge-doc conc">1</span></td>
+        <td><span class="badge-doc beh">64</span> <span class="badge-doc beh">4096</span></td>
+        <td><span class="badge-doc conc">single request</span></td>
+      </tr>
+      <tr>
+        <td>chat</td>
+        <td>Conversational flow with short context exchanges</td>
+        <td><span class="badge-doc conc">1</span></td>
+        <td><span class="badge-doc beh">128</span></td>
+        <td><span class="badge-doc conc">conversational (short user messages)</span></td>
+      </tr>
+      <tr>
+        <td>multi-agent</td>
+        <td>Multiple independent agents running in parallel</td>
+        <td><span class="badge-doc conc">4</span> <span class="badge-doc conc">12</span></td>
+        <td><span class="badge-doc beh">256</span> <span class="badge-doc beh">4096</span></td>
+        <td><span class="badge-doc conc">independent parallel agents (user queries + tool context)</span></td>
+      </tr>
+      <tr>
+        <td>high-throughput</td>
+        <td>Many users hitting the endpoint simultaneously</td>
+        <td><span class="badge-doc conc">32</span> <span class="badge-doc conc">64</span> <span class="badge-doc conc">128</span></td>
+        <td><span class="badge-doc beh">64</span> <span class="badge-doc beh">256</span> <span class="badge-doc beh">1024</span></td>
+        <td><span class="badge-doc conc">constant concurrent load</span></td>
+      </tr>
+      <tr>
+        <td>stress</td>
+        <td>Maximum concurrency until degradation</td>
+        <td><span class="badge-doc conc">256</span> <span class="badge-doc conc">512</span></td>
+        <td><span class="badge-doc beh">1024</span> <span class="badge-doc beh">4096</span></td>
+        <td><span class="badge-doc conc">degradation testing</span></td>
+      </tr>
+    </tbody>
+  </table>
+  <p>
+    Each scenario runs <strong>2 warmup iterations</strong> followed by
+    <strong>10 measured iterations</strong> to gather timing data.
+    Prompt sizes are defined per-profile in the codebase — see
+    <code>llm_race/bench/workloads.py</code>.
+  </p>
+</div>
+
+<div class="docs-section">
+  <h2>Measured Metrics</h2>
+  <p>
+    Metrics are collected per-request and aggregated across all measured iterations.
+    All latency values are stored in milliseconds in the database and displayed rounded
+    to one decimal place.
+  </p>
+
+  <div class="metric-grid">
+    <div class="metric-card">
+      <h4>⚡ PP (Prompt Processing)</h4>
+      <p>How fast the system processes the input prompt during the prefill phase. Measured as prompt tokens per second until the first output token.</p>
+      <span class="metric-formula">PP = prompt_tokens ÷ TTFT</span>
+    </div>
+    <div class="metric-card">
+      <h4>📊 TGS (Token Generation Speed)</h4>
+      <p>Output tokens per second averaged across all requests in a scenario. The total completion tokens divided by wall-clock time.</p>
+      <span class="metric-formula">TGS = ∑ completion_tokens ÷ wall_clock_seconds</span>
+    </div>
+    <div class="metric-card">
+      <h4>⏱️ TTFT (Time to First Token)</h4>
+      <p>Time between sending the request and receiving the first output token. Measures the initial model latency — prompt processing, prefill, and queue wait.</p>
+      <span class="metric-formula">TTFT = response.first_token_time − request.sent_time</span>
+    </div>
+    <div class="metric-card">
+      <h4>📏 E2E Latency (End-to-End)</h4>
+      <p>Total time from request submission to final token received. The full round-trip including network, queue, prefill, and decode.</p>
+      <span class="metric-formula">E2E = response.last_token_time − request.sent_time</span>
+    </div>
+    <div class="metric-card">
+      <h4>⚡ ITL (Inter-Token Latency)</h4>
+      <p>Time between consecutive output tokens during streaming. Represents the decode speed — how fast the model generates each subsequent token.</p>
+      <span class="metric-formula">ITL = token[i+1].time − token[i].time</span>
+    </div>
+    <div class="metric-card">
+      <h4>🔁 Throughput (RPS)</h4>
+      <p>Requests per second. The number of completed requests divided by the wall-clock time of the scenario.</p>
+      <span class="metric-formula">RPS = successful_requests / wall_clock_seconds</span>
+    </div>
+    <div class="metric-card">
+      <h4>⏳ Wall Clock Time</h4>
+      <p>Real elapsed time for the entire scenario (warmup + measured iterations). This is the actual time the benchmark took to run.</p>
+    </div>
+    <div class="metric-card">
+      <h4>✅ Request Status</h4>
+      <p>Each request is tracked as successful or failed, with error messages recorded for failures. The success rate helps assess reliability under load.</p>
+    </div>
+    <div class="metric-card">
+      <h4>🏷️ Token Counts</h4>
+      <p>Prompt tokens (input), completion tokens (output), and total tokens per request. Reported by the provider or counted client-side.</p>
+    </div>
+  </div>
+</div>
+
+<div class="docs-section">
+  <h2>Percentile Metrics</h2>
+  <p>
+    For E2E, TTFT, and ITL, the benchmark reports multiple percentile values to give
+    a complete picture of the latency distribution:
+  </p>
+  <table class="table" style="min-width: auto;">
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>What it tells you</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Mean</strong></td>
+        <td>Average latency — useful for capacity planning and cost estimation.</td>
+      </tr>
+      <tr>
+        <td><strong>P50 (Median)</strong></td>
+        <td>Typical user experience — half of requests are faster than this.</td>
+      </tr>
+      <tr>
+        <td><strong>P90</strong></td>
+        <td>90th percentile — most users (9 out of 10) will experience this or better.</td>
+      </tr>
+      <tr>
+        <td><strong>P99</strong></td>
+        <td>99th percentile — the worst-case for all but 1% of requests. Reveals tail latency.</td>
+      </tr>
+      <tr>
+        <td><strong>Max</strong></td>
+        <td>Absolute worst-case latency observed. Only reported for E2E.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="docs-section">
+  <h2>Providers</h2>
+  <p>
+    LLM Race supports multiple providers through a common interface. Each provider
+    implements <code>stream_complete(prompt)</code> and <code>complete(prompt)</code> and
+    returns token streams with timestamps:
+  </p>
+  <ul>
+    <li><strong>vLLM</strong> — OpenAI-compatible API, synchronous streaming over HTTP.</li>
+    <li><strong>Ollama</strong> — Local Ollama instance via its REST API.</li>
+    <li><strong>LM Studio</strong> — Local inference server with OpenAI-compatible endpoint.</li>
+    <li><strong>MLX</strong> — Apple Silicon optimized MLX runtime.</li>
+  </ul>
+  <p>
+    All providers use <code>httpx.AsyncClient</code> for concurrent requests. API keys
+    are read from environment variables or a <code>.env</code> file.
+  </p>
+</div>
+
+<div class="docs-section">
+  <h2>Machine Information</h2>
+  <p>
+    Every benchmark records the machine specs to enable fair comparisons:
+  </p>
+  <ul>
+    <li><strong>Hostname</strong> — machine identifier.</li>
+    <li><strong>CPU</strong> — processor model.</li>
+    <li><strong>GPU</strong> — GPU model(s) and count.</li>
+    <li><strong>RAM</strong> — total system memory in GB.</li>
+    <li><strong>OS</strong> — operating system name and version.</li>
+    <li><strong>Driver version</strong> — GPU driver (e.g., CUDA version).</li>
+    <li><strong>Python version</strong> — runtime version.</li>
+  </ul>
+  <p>
+    Machine info is collected once per session and cached. Pass <code>--force-detect</code>
+    to re-collect.
+  </p>
+</div>
+
+<div class="docs-section">
+  <h2>Database Schema</h2>
+  <p>
+    Data is stored in a local SQLite database at <code>data/benchmarks.db</code>.
+    The key tables are:
+  </p>
+  <ul>
+    <li><strong>models</strong> — LLM model metadata (name, version, quantization, provider, context window).</li>
+    <li><strong>machines</strong> — Hardware specs for the benchmarking machine.</li>
+    <li><strong>benchmarks</strong> — Per-run scenario results with all aggregated metrics.</li>
+    <li><strong>results</strong> — Per-request raw measurements (timestamps, token counts, status).</li>
+  </ul>
+</div>
+
+<div class="docs-section">
+  <h2>How to Run a Benchmark</h2>
+  <ol>
+    <li>Start your provider (e.g., vLLM server, Ollama, LM Studio).</li>
+    <li>Run: <code>python3 -m llm_race run --model "&lt;model&gt;" --provider &lt;provider&gt; --base-url &lt;url&gt;</code></li>
+    <li>View results: <code>python3 -m llm_race.web</code> and open <a href="/">the web viewer</a>.</li>
+  </ol>
+  <p>
+    Use <code>--workload</code> to choose a profile, <code>--concurrency</code> and
+    <code>--prompt-lengths</code> for custom scenarios, or <code>--preset</code> to run
+    predefined model/provider combinations from <code>presets.json</code>.
+  </p>
+</div>
+{% endblock %}

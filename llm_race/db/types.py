@@ -10,6 +10,25 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True)
+class BenchmarkGroupSummary:
+    """Aggregated view of all benchmarks sharing the same run_id (one python3 run)."""
+
+    run_id: str
+    model_name: str
+    provider_name: str
+    hostname: str
+    workload_profile: str
+    scenario_count: int
+    started_at: datetime
+    completed_at: datetime | None
+    best_throughput_tps: float | None
+    best_pp: float | None
+    avg_ttft_mean_ms: float | None
+    avg_e2e_mean_ms: float | None
+    status: str
+
+
+@dataclass(frozen=True)
 class BenchmarkFilters:
     """Filters for querying benchmarks."""
 
@@ -42,6 +61,8 @@ class BenchmarkSummary:
     successful_requests: int
     failed_requests: int
     throughput_tps: float | None
+    pp_mean: float | None
+    ttft_mean_ms: float | None
     e2e_mean_ms: float | None
     status: str
 
@@ -59,6 +80,7 @@ class ResultRow:
     completion_tokens: int
     total_tokens: int
     tokens_per_second: float | None
+    pp: float | None
     itl_mean: float | None
 
 
@@ -74,6 +96,10 @@ class BenchmarkDetail(BenchmarkSummary):
     ttft_p50_ms: float | None
     ttft_p90_ms: float | None
     ttft_p99_ms: float | None
+    pp_mean: float | None
+    pp_p50: float | None
+    pp_p90: float | None
+    pp_p99: float | None
     itl_mean_ms: float | None
     itl_p50_ms: float | None
     itl_p90_ms: float | None
