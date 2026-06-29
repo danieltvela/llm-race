@@ -15,10 +15,14 @@ import logging
 import mimetypes
 import os
 import posixpath
+import socketserver
+from contextlib import contextmanager
 from datetime import datetime, date
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse, parse_qs
+
+from sqlalchemy.orm import Session
 
 from jinja2 import Environment, FileSystemLoader, PackageLoader
 
@@ -68,9 +72,6 @@ def _init_db_on_startup() -> None:
 
 
 def _get_db_session():
-    from contextlib import contextmanager
-    from sqlalchemy.orm import Session
-
     @contextmanager
     def _session():
         if _SessionFactory is None:
@@ -458,8 +459,12 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             self.send_error(500, f"Error reading file: {exc}")
 
 
-def create_server(host: str = WEB_HOST, port: int = WEB_PORT) -> http.server.HTTPServer:
-    server = http.server.HTTPServer((host, port), BenchmarkHTTPHandler)
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    """Threaded HTTP server — handles each request in a separate thread."""
+
+
+def create_server(host: str = WEB_HOST, port: int = WEB_PORT) -> ThreadingHTTPServer:
+    server = ThreadingHTTPServer((host, port), BenchmarkHTTPHandler)
     logger.info("Server created at %s:%d", host, port)
     return server
 

@@ -17,6 +17,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    event,
 )
 from sqlalchemy.orm import (
     DeclarativeBase,
@@ -195,7 +196,17 @@ def init_db(db_path: str | Path = DB_PATH) -> tuple[Engine, sessionmaker[Session
     Returns:
         A tuple of (engine, session_factory).
     """
-    engine = create_engine(f"sqlite:///{db_path}", echo=False)
+    engine = create_engine(
+        f"sqlite:///{db_path}",
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
+
+    @event.listens_for(engine, "connect")
+    def _enable_wal(dbapi_connection: object, _connection_record: object) -> None:
+        cursor = dbapi_connection.cursor()  # type: ignore[union-attr]
+        cursor.execute("PRAGMA journal_mode=WAL")
+
     Base.metadata.create_all(engine)
     session_factory = sessionmaker(bind=engine)
     logger.info("Database initialized at %s", db_path)

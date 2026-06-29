@@ -13,14 +13,18 @@ Benchmark and speed-test tracker for LLM models across different providers, mach
 ## Quick start
 
 ```bash
-cd projects/ai/llm-race
-pip install -r requirements.txt
+# Create and activate virtual environment (one time)
+uv venv
+source .venv/bin/activate
+
+# Install dependencies
+uv pip install -r requirements.txt
 
 # Run a benchmark
-python -m llm_race.bench run --model "qwen3.6-27b-fp8" --provider vllm --base-url http://192.168.1.47:8005
+python3 -m llm_race run --model "Qwen3.6-35B-A3B-FP8" --provider vllm --base-url http://192.168.1.47:8005/v1 --workload multi-agent
 
 # View results in browser
-python -m llm_race.web
+python3 -m llm_race.web
 ```
 
 ## Architecture
