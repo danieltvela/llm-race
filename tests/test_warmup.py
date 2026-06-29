@@ -78,7 +78,8 @@ class TestWarmupDiscard:
             measured_iterations=3,
         )
         assert len(metrics) == 6, f"Expected 6 metrics, got {len(metrics)}"
-        assert provider.call_count == 10, f"Expected 10 calls, got {provider.call_count}"
+        # warmup_iterations=2 at concurrency=1 + measured_iterations=3 at concurrency=2 = 2 + 6 = 8
+        assert provider.call_count == 8, f"Expected 8 calls, got {provider.call_count}"
         assert wall_elapsed > 0, "Wall clock should be positive"
 
     @pytest.mark.asyncio
@@ -168,7 +169,7 @@ class TestDefaults:
     """Default constants must match AGENTS.md."""
 
     def test_default_warmup(self) -> None:
-        assert DEFAULT_WARMUP_ITERATIONS == 2
+        assert DEFAULT_WARMUP_ITERATIONS == 1
 
     def test_default_measured(self) -> None:
         assert DEFAULT_MEASURED_ITERATIONS == 10

@@ -46,7 +46,7 @@ class TestWorkloadRegistry:
     def test_multi_agent_profile(self):
         p = WORKLOAD_REGISTRY["multi-agent"]
         assert p.name == "multi-agent"
-        assert p.concurrency_levels == [4, 8, 16]
+        assert p.concurrency_levels == [1, 4]
 
     def test_high_throughput_profile(self):
         p = WORKLOAD_REGISTRY["high-throughput"]

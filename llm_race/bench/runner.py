@@ -122,7 +122,11 @@ async def run_scenario(
         logger.warning("measured_iterations is 0, returning empty results")
         return [], 0.0
 
-    async def _run_batch(client: httpx.AsyncClient) -> list[RequestMetrics]:
+    async def _run_batch(
+        client: httpx.AsyncClient,
+        batch_concurrency: int | None = None,
+    ) -> list[RequestMetrics]:
+        actual_concurrency = concurrency if batch_concurrency is None else batch_concurrency
         coros = [
             provider.stream_complete(
                 model=model,
@@ -132,7 +136,7 @@ async def run_scenario(
                 top_p=top_p,
                 client=client,
             )
-            for _ in range(concurrency)
+            for _ in range(actual_concurrency)
         ]
         raw_results = await asyncio.gather(*coros, return_exceptions=True)
 
@@ -177,7 +181,8 @@ async def run_scenario(
 
     async def _run_all(client: httpx.AsyncClient) -> tuple[list[RequestMetrics], float]:
         for i in range(warmup_iterations):
-            batch = await _run_batch(client)
+            # Warmup at concurrency=1 to prime caches without overwhelming the provider
+            batch = await _run_batch(client, batch_concurrency=1)
             failed = [m for m in batch if m.status == "error"]
             for m in failed:
                 logger.warning("Request failed during warmup: %s", m.error_message)
@@ -199,7 +204,7 @@ async def run_scenario(
         async with httpx.AsyncClient(limits=limits, timeout=provider.timeout) as client:
             metrics, wall_elapsed = await _run_all(client)
     else:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=provider.timeout) as client:
             metrics, wall_elapsed = await _run_all(client)
 
     logger.info(
@@ -331,6 +336,29 @@ async def run_benchmarks(
     if workload_profile:
         logger.info("  Workload profile: %s", workload_profile)
     logger.info("=" * 80)
+
+    # Global warmup — one sequential request to prime the model and connection pool
+    logger.info("Global warmup: sending initial request to warm up model and connections...")
+    try:
+        warmup_prompt = generate_prompt(prompt_lengths[0])
+        warmup_messages: list[dict[str, Any]] = [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": warmup_prompt},
+        ]
+        async with httpx.AsyncClient(timeout=provider.timeout) as warmup_client:
+            warmup_result = await provider.stream_complete(
+                model=model,
+                messages=warmup_messages,
+                max_tokens=1,
+                temperature=temperature,
+                top_p=top_p,
+                client=warmup_client,
+            )
+            logger.info(
+                "Global warmup complete: status=%s", warmup_result.get("status", "unknown")
+            )
+    except Exception as exc:
+        logger.warning("Global warmup failed (non-fatal): %s", exc)
 
     all_results: list[ScenarioResult] = []
     all_scenario_metrics: list[list[RequestMetrics]] = []
