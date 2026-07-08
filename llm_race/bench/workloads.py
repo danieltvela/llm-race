@@ -72,9 +72,17 @@ STRESS: Final = WorkloadProfile(
     behavior="degradation testing",
 )
 
+VOICEBOT: Final = WorkloadProfile(
+    name="voicebot",
+    description="Voice assistant — short queries, minimal TTFT, no thinking",
+    concurrency_levels=[1],
+    default_prompt_lengths=[16, 32],
+    behavior="voice assistant (short query, fast response, no thinking)",
+)
+
 WORKLOAD_REGISTRY: Final[dict[str, WorkloadProfile]] = {
     p.name: p
-    for p in (SINGLE_USER, CHAT, MULTI_AGENT, HIGH_THROUGHPUT, STRESS)
+    for p in (SINGLE_USER, CHAT, MULTI_AGENT, HIGH_THROUGHPUT, STRESS, VOICEBOT)
 }
 
 

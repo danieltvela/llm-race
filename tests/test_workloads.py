@@ -13,6 +13,7 @@ from llm_race.bench.workloads import (
     SINGLE_USER,
     STRESS,
     CHAT,
+    VOICEBOT,
     WORKLOAD_REGISTRY,
     WorkloadProfile,
     get_workload,
@@ -25,11 +26,11 @@ from llm_race.bench.workloads import (
 
 
 class TestWorkloadRegistry:
-    """Verify all 5 profiles exist with correct attributes."""
+    """Verify all 6 profiles exist with correct attributes."""
 
     def test_registry_contains_all_profiles(self):
-        assert len(WORKLOAD_REGISTRY) == 5
-        for name in ("single-user", "chat", "multi-agent", "high-throughput", "stress"):
+        assert len(WORKLOAD_REGISTRY) == 6
+        for name in ("single-user", "chat", "multi-agent", "high-throughput", "stress", "voicebot"):
             assert name in WORKLOAD_REGISTRY
 
     def test_single_user_profile(self):
@@ -46,7 +47,7 @@ class TestWorkloadRegistry:
     def test_multi_agent_profile(self):
         p = WORKLOAD_REGISTRY["multi-agent"]
         assert p.name == "multi-agent"
-        assert p.concurrency_levels == [1, 4]
+        assert p.concurrency_levels == [2, 8]
 
     def test_high_throughput_profile(self):
         p = WORKLOAD_REGISTRY["high-throughput"]
@@ -57,6 +58,14 @@ class TestWorkloadRegistry:
         p = WORKLOAD_REGISTRY["stress"]
         assert p.name == "stress"
         assert p.concurrency_levels == [256, 512]
+
+    def test_voicebot_profile(self):
+        p = WORKLOAD_REGISTRY["voicebot"]
+        assert p.name == "voicebot"
+        assert p.concurrency_levels == [1]
+        assert p.default_prompt_lengths == [16, 32]
+        assert "voice" in p.description.lower()
+        assert "ttft" in p.description.lower()
 
     def test_all_profiles_have_default_prompt_lengths(self):
         for name, profile in WORKLOAD_REGISTRY.items():
@@ -130,6 +139,7 @@ class TestCLIIntegration:
         assert "--workload" in result.stdout
         assert "single-user" in result.stdout
         assert "multi-agent" in result.stdout
+        assert "voicebot" in result.stdout
 
     def test_cli_rejects_invalid_workload(self):
         result = self._run_cli("run", "--workload", "invalid")

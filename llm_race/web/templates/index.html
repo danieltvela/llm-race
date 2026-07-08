@@ -46,6 +46,15 @@
             <option value="failed" {% if filters.status == 'failed' %}selected{% endif %}>Failed</option>
         </select>
     </div>
+    <div class="filter-group">
+        <label for="workload_profile">Workload</label>
+        <select id="workload_profile" name="workload_profile">
+            <option value="">All</option>
+            {% for w in workload_profiles %}
+            <option value="{{ w }}" {% if filters.workload_profile == w %}selected{% endif %}>{{ w }}</option>
+            {% endfor %}
+        </select>
+    </div>
     <div class="filter-actions">
         <button type="submit" class="btn btn-primary">Filter</button>
         <a href="/" class="btn btn-secondary">Reset</a>

@@ -21,10 +21,10 @@ source .venv/bin/activate
 uv pip install -r requirements.txt
 
 # Run a benchmark
-python3 -m llm_race run --model "Qwen3.6-35B-A3B-FP8" --provider vllm --base-url http://192.168.1.47:8005/v1 --workload multi-agent
+python3 -m llm_race run --model "Qwen3.6-27B-NVFP4" --provider vllm --base-url http://192.168.1.47:8005/v1 --workload multi-agent
 
 # View results in browser
-python3 -m llm_race.web
+python3 -m llm_race.web --host 0.0.0.0 --port 7979
 ```
 
 ## Architecture

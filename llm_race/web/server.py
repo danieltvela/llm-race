@@ -197,6 +197,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             model_names = [row[0] for row in session.query(Model.name).distinct().order_by(Model.name).all()]
             provider_names = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
             machine_hostnames = [row[0] for row in session.query(Machine.hostname).distinct().order_by(Machine.hostname).all()]
+            workload_profiles = [row[0] for row in session.query(Benchmark.workload_profile).distinct().order_by(Benchmark.workload_profile).all()]
 
             html = jinja_env.get_template("index.html").render(
                 benchmarks=result.items,
@@ -212,6 +213,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
                 model_names=model_names,
                 provider_names=provider_names,
                 machine_hostnames=machine_hostnames,
+                workload_profiles=workload_profiles,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )

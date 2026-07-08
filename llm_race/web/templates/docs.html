@@ -146,6 +146,13 @@
         <td><span class="badge-doc beh">1024</span> <span class="badge-doc beh">4096</span></td>
         <td><span class="badge-doc conc">degradation testing</span></td>
       </tr>
+      <tr>
+        <td>voicebot</td>
+        <td>Voice assistant — short queries, minimal TTFT, no thinking</td>
+        <td><span class="badge-doc conc">1</span></td>
+        <td><span class="badge-doc beh">16</span> <span class="badge-doc beh">32</span></td>
+        <td><span class="badge-doc conc">voice assistant (short query, fast response, no thinking)</span></td>
+      </tr>
     </tbody>
   </table>
   <p>
@@ -153,6 +160,50 @@
     <strong>10 measured iterations</strong> to gather timing data.
     Prompt sizes are defined per-profile in the codebase — see
     <code>llm_race/bench/workloads.py</code>.
+  </p>
+</div>
+
+<div class="docs-section">
+  <h2>Voicebot Workload</h2>
+  <p>
+    The <strong>voicebot</strong> workload is designed to find the fastest model and provider
+    for voice assistant applications. Voice assistants require near-instant responses: the
+    user speaks a short query and expects an immediate reply. Any noticeable delay breaks
+    the illusion of a natural conversation.
+  </p>
+
+  <h3>What makes it different</h3>
+  <ul>
+    <li><strong>Very small prompts (16–32 tokens)</strong> — Voice queries are short:
+      "What's the weather?", "Set a timer for 5 minutes", "Call mom".</li>
+    <li><strong>Short responses</strong> — Voice replies should be concise. Use
+      <code>--max-tokens 64</code> or <code>--max-tokens 128</code> to simulate real voice output.</li>
+    <li><strong>No thinking mode</strong> — Thinking/reasoning tokens add latency without
+      improving voice responses. Disable thinking on your provider for accurate results.</li>
+    <li><strong>Single concurrency</strong> — One user, one voice interaction at a time.</li>
+    <li><strong>TTFT is the key metric</strong> — Time to First Token determines how quickly
+      the assistant starts speaking. Lower TTFT means a more responsive voice experience.</li>
+  </ul>
+
+  <h3>How to run</h3>
+  <p>
+    Run the voicebot benchmark with a small <code>--max-tokens</code> to simulate short voice responses:
+  </p>
+  <pre style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius); overflow-x: auto; font-size: 0.85rem; color: var(--text-primary);">
+python3 -m llm_race run --workload voicebot --model &lt;model&gt; --provider &lt;provider&gt; --base-url &lt;url&gt; --max-tokens 64 --temperature 0</pre>
+  <p>
+    Recommended settings for voicebot benchmarks:
+  </p>
+  <ul>
+    <li><code>--max-tokens 64</code> — Short voice responses (recommended)</li>
+    <li><code>--temperature 0</code> — Deterministic output for consistent comparisons</li>
+    <li>Disable any "thinking" or "reasoning" mode on your provider endpoint</li>
+  </ul>
+  <p>
+    The primary metric to compare is <strong>TTFT (Time to First Token)</strong>.
+    A lower TTFT means the model starts generating faster, which translates to a
+    more responsive voice assistant. Secondary metrics include E2E latency and
+    prompt processing speed (PP).
   </p>
 </div>
 
