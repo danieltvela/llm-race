@@ -5,9 +5,18 @@
 
 <form method="GET" action="/" class="filter-form">
     <div class="filter-group">
-        <label for="model_name">Model</label>
-        <input type="text" id="model_name" name="model_name" 
+        <label for="model_name">Model (name/slug)</label>
+        <input type="text" id="model_name" name="model_name"
                value="{{ filters.model_name or '' }}" placeholder="Search model...">
+    </div>
+    <div class="filter-group">
+        <label for="ai_lab">AI Lab</label>
+        <select id="ai_lab" name="ai_lab">
+            <option value="">All</option>
+            {% for lab in ai_lab_names %}
+            <option value="{{ lab }}" {% if filters.ai_lab == lab %}selected{% endif %}>{{ lab }}</option>
+            {% endfor %}
+        </select>
     </div>
     <div class="filter-group">
         <label for="provider_name">Provider</label>
@@ -29,12 +38,12 @@
     </div>
     <div class="filter-group">
         <label for="date_start">From</label>
-        <input type="date" id="date_start" name="date_start" 
+        <input type="date" id="date_start" name="date_start"
                value="{{ filters.date_start.strftime('%Y-%m-%d') if filters.date_start else '' }}">
     </div>
     <div class="filter-group">
         <label for="date_end">To</label>
-        <input type="date" id="date_end" name="date_end" 
+        <input type="date" id="date_end" name="date_end"
                value="{{ filters.date_end.strftime('%Y-%m-%d') if filters.date_end else '' }}">
     </div>
     <div class="filter-group">
@@ -91,7 +100,10 @@
                         <button class="copy-btn" onclick="event.stopPropagation(); copyRunId('{{ b.run_id }}', this)" title="Copy run ID">📋</button>
                     </span>
                 </td>
-                <td>{{ b.model_name }}</td>
+                <td>
+                    {{ b.model_name }}
+                    <br><small><code>{{ b.model_slug }}</code></small>
+                </td>
                 <td>{{ b.provider_name }}</td>
                 <td>{{ b.hostname }}</td>
                 <td>{{ b.workload_profile }}</td>

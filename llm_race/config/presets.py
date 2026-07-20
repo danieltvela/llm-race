@@ -5,6 +5,11 @@ import logging
 from pathlib import Path
 from typing import Any
 
+import json
+import logging
+from pathlib import Path
+from typing import Any
+
 logger = logging.getLogger(__name__)
 
 _PRESETS: list[dict[str, Any]] | None = None
@@ -24,7 +29,7 @@ def _load_presets_data() -> list[dict[str, Any]]:
 
     presets: list[dict[str, Any]] = data.get("presets", [])
 
-    required_fields = ("key", "name", "provider", "model")
+    required_fields = ("key", "name", "provider", "slug", "ai_lab", "model_api_name", "quantization")
     for preset in presets:
         missing = [f for f in required_fields if f not in preset]
         if missing:

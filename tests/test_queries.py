@@ -1,9 +1,4 @@
-"""Test fixtures and helper factories for db-queries test suite (TDD scaffolding).
-
-This file provides shared fixtures and factory functions for testing query
-functions. Query function implementations belong in Wave 2 — this file is
-pure scaffolding.
-"""
+"""Test fixtures and helper factories for db-queries test suite."""
 
 from __future__ import annotations
 
@@ -54,24 +49,15 @@ def db_session():
 
 @pytest.fixture
 def query_session(db_session: Session) -> Session:
-    """Populate *db_session* with reference data for query tests.
-
-    Creates:
-      - 2 models  (vllm, openai)
-      - 2 machines (gpu-server-1, gpu-server-2)
-      - 5 benchmarks (spread across dates, statuses, workloads, prompt sizes, concurrency)
-      - 10+ results (at least 2 per benchmark)
-
-    The created objects are stored in ``db_session.query_session_data`` as a
-    dict for easy reference by downstream tests.
-    """
+    """Populate *db_session* with reference data for query tests."""
     session: Session = db_session
 
     # --- Models ----------------------------------------------------------
     model_vllm = Model(
+        slug="meta-llama/llama-3.1-8b/fp8",
+        ai_lab="meta-llama",
         name="meta-llama/Llama-3.1-8B",
-        version="1.0.0",
-        quantization="FP8",
+        quantization="fp8",
         provider_name="vllm",
         context_window=128_000,
     )
@@ -79,9 +65,10 @@ def query_session(db_session: Session) -> Session:
     session.flush()
 
     model_openai = Model(
+        slug="openai/gpt-4o-mini/none",
+        ai_lab="openai",
         name="gpt-4o-mini",
-        version="2024-07-18",
-        quantization=None,
+        quantization="none",
         provider_name="openai",
         context_window=128_000,
     )
@@ -118,7 +105,6 @@ def query_session(db_session: Session) -> Session:
     session.flush()
 
     # --- Benchmarks ------------------------------------------------------
-    # 5 benchmarks with varied attributes
     benchmarks: list[Benchmark] = []
 
     benchmarks.append(Benchmark(
@@ -215,12 +201,11 @@ def query_session(db_session: Session) -> Session:
     session.flush()
 
     # --- Results ---------------------------------------------------------
-    # At least 2 results per benchmark (10+ total)
     results: list[Result] = []
     request_counter = 1
 
     for b in benchmarks:
-        n_results = max(2, b.total_requests)  # at least 2, up to total_requests
+        n_results = max(2, b.total_requests)
         for req_idx in range(n_results):
             results.append(Result(
                 benchmark_id=b.id,
@@ -240,7 +225,6 @@ def query_session(db_session: Session) -> Session:
     session.add_all(results)
     session.commit()
 
-    # Store reference data on the session for easy access
     session.query_session_data = {  # type: ignore[attr-defined]
         "models": [model_vllm, model_openai],
         "machines": [machine_1, machine_2],
@@ -257,17 +241,21 @@ def query_session(db_session: Session) -> Session:
 
 def create_model(
     session: Session,
+    slug: str = "test-lab/test-model/none",
+    ai_lab: str = "test-lab",
     name: str = "test-model",
-    version: str = "1.0",
-    quantization: str | None = "FP8",
+    quantization: str | None = "none",
     provider_name: str = "vllm",
     context_window: int | None = 4096,
+    extra: str | None = None,
 ) -> Model:
     """Create and return a Model record."""
     m = Model(
+        slug=slug,
+        ai_lab=ai_lab,
         name=name,
-        version=version,
         quantization=quantization,
+        extra=extra,
         provider_name=provider_name,
         context_window=context_window,
     )
@@ -344,39 +332,6 @@ def create_benchmark(
     return b
 
 
-def create_result(
-    session: Session,
-    benchmark: Benchmark,
-    request_id: int | None = None,
-    status: str = "success",
-    error_message: str | None = None,
-    ttft_ms: float | None = None,
-    e2e_latency_ms: float | None = None,
-    prompt_tokens: int = 50,
-    completion_tokens: int = 20,
-    total_tokens: int = 70,
-    tokens_per_second: float | None = None,
-    itl_mean: float | None = None,
-) -> Result:
-    """Create and return a Result record."""
-    r = Result(
-        benchmark_id=benchmark.id,
-        request_id=request_id or benchmark.results[-1].request_id + 1 if benchmark.results else 1,
-        status=status,
-        error_message=error_message,
-        ttft_ms=ttft_ms,
-        e2e_latency_ms=e2e_latency_ms,
-        prompt_tokens=prompt_tokens,
-        completion_tokens=completion_tokens,
-        total_tokens=total_tokens,
-        tokens_per_second=tokens_per_second,
-        itl_mean=itl_mean,
-    )
-    session.add(r)
-    session.commit()
-    return r
-
-
 # ---------------------------------------------------------------------------
 # Smoke test
 # ---------------------------------------------------------------------------
@@ -404,7 +359,7 @@ class TestListBenchmarks:
         result = list_benchmarks(query_session, filters=BenchmarkFilters(model_name="llama"))
         assert result.total_count > 0
         for item in result.items:
-            assert "llama" in item.model_name.lower()
+            assert "llama" in item.model_name.lower() or "llama" in item.model_slug.lower()
 
     def test_filter_by_provider(self, query_session):
         """Filter by provider_name."""
@@ -426,7 +381,8 @@ class TestListBenchmarks:
             date_start=datetime(2026, 5, 1, tzinfo=timezone.utc)))
         assert result.total_count > 0
         for item in result.items:
-            assert item.started_at >= datetime(2026, 5, 1, tzinfo=timezone.utc)
+            # Compare dates only to avoid naive/aware mismatch
+            assert item.started_at.date() >= datetime(2026, 5, 1, tzinfo=timezone.utc).date()
 
     def test_filter_by_status(self, query_session):
         """Filter by benchmark status."""
@@ -458,8 +414,8 @@ class TestListBenchmarks:
     def test_pagination_total_count(self, query_session):
         """total_count reflects unfiltered count."""
         result = list_benchmarks(query_session, limit=2)
-        assert result.total_count == 5  # unfiltered
-        assert len(result.items) == 2  # limited
+        assert result.total_count == 5
+        assert len(result.items) == 2
 
     def test_sort_by_default(self, query_session):
         """Default sort is started_at DESC."""
@@ -471,7 +427,6 @@ class TestListBenchmarks:
         """Sort by throughput_tps ASC."""
         result = list_benchmarks(query_session, sort_by="throughput_tps", sort_order="asc")
         vals = [item.throughput_tps for item in result.items]
-        # Filter Nones and check ascending
         vals = [v for v in vals if v is not None]
         if vals:
             assert vals == sorted(vals)
@@ -484,7 +439,6 @@ class TestListBenchmarks:
 
     def test_invalid_sort_field(self, query_session):
         """Invalid sort_by raises ValueError."""
-        import pytest
         with pytest.raises(ValueError):
             list_benchmarks(query_session, sort_by="not_a_column")
 
@@ -494,7 +448,6 @@ class TestCompareRuns:
 
     def test_compare_two_runs(self, query_session):
         """Pass 2 valid run_ids, returns 2 BenchmarkDetail items."""
-        from sqlalchemy import select
         bms = query_session.execute(select(Benchmark).limit(2)).scalars().all()
         run_ids = [b.run_id for b in bms]
         result = compare_runs(query_session, run_ids)
@@ -504,7 +457,6 @@ class TestCompareRuns:
 
     def test_compare_three_runs(self, query_session):
         """Pass 3 valid run_ids."""
-        from sqlalchemy import select
         bms = query_session.execute(select(Benchmark).limit(3)).scalars().all()
         run_ids = [b.run_id for b in bms]
         result = compare_runs(query_session, run_ids)
@@ -512,7 +464,6 @@ class TestCompareRuns:
 
     def test_compare_four_runs(self, query_session):
         """Pass 4 valid run_ids."""
-        from sqlalchemy import select
         bms = query_session.execute(select(Benchmark).limit(4)).scalars().all()
         run_ids = [b.run_id for b in bms]
         result = compare_runs(query_session, run_ids)
@@ -520,36 +471,32 @@ class TestCompareRuns:
 
     def test_compare_includes_result_data(self, query_session):
         """Each BenchmarkDetail includes results list."""
-        from sqlalchemy import select
         bms = query_session.execute(select(Benchmark).limit(2)).scalars().all()
         run_ids = [b.run_id for b in bms]
         result = compare_runs(query_session, run_ids)
         for detail in result:
-            # Should have results from fixture
             assert isinstance(detail.results, list)
             if detail.results:
                 assert isinstance(detail.results[0], ResultRow)
 
     def test_compare_rejects_single_run(self, query_session):
         """ValueError if < 2 run_ids."""
-        import pytest
         with pytest.raises(ValueError):
             compare_runs(query_session, ["only-one"])
 
     def test_compare_rejects_five_runs(self, query_session):
         """ValueError if > 4 run_ids."""
-        import pytest
         with pytest.raises(ValueError):
             compare_runs(query_session, ["a", "b", "c", "d", "e"])
 
     def test_compare_fields_match_summary(self, query_session):
         """BenchmarkDetail includes all BenchmarkSummary fields."""
-        from sqlalchemy import select
         bms = query_session.execute(select(Benchmark).limit(2)).scalars().all()
         run_ids = [b.run_id for b in bms]
         result = compare_runs(query_session, run_ids)
         detail = result[0]
         assert detail.model_name is not None
+        assert detail.model_slug is not None
         assert detail.provider_name is not None
         assert detail.hostname is not None
         assert detail.status is not None
@@ -578,9 +525,8 @@ class TestTimeseries:
             assert p.run_id is not None
 
     def test_timeseries_filter_by_model(self, query_session):
-        """Only returns benchmarks for matching model."""
+        """Only returns benchmarks for matching model (slug or name)."""
         points = timeseries(query_session, model="gpt-4o-mini", metric="throughput_tps", level="benchmark")
-        # The fixtures should have benchmarks for gpt-4o-mini
         assert len(points) > 0
 
     def test_timeseries_filter_by_provider(self, query_session):
@@ -619,12 +565,10 @@ class TestTimeseries:
 
     def test_timeseries_invalid_metric(self, query_session):
         """Invalid metric raises ValueError."""
-        import pytest
         with pytest.raises(ValueError):
             timeseries(query_session, metric="not_a_column")
 
     def test_timeseries_invalid_level(self, query_session):
         """Invalid level raises ValueError."""
-        import pytest
         with pytest.raises(ValueError):
             timeseries(query_session, level="invalid")

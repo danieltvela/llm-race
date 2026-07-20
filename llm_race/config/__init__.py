@@ -14,7 +14,10 @@ DATA_DIR = PROJECT_ROOT / "data"
 DB_PATH = DATA_DIR / "benchmarks.db"
 
 DEFAULT_BASE_URL = os.environ.get("LLM_RACE_BASE_URL", "http://localhost:8000/v1")
-DEFAULT_MODEL = os.environ.get("LLM_RACE_MODEL", "Qwen3-8B")
+DEFAULT_MODEL_SLUG = os.environ.get("LLM_RACE_MODEL_SLUG", "qwen/qwen3-8b/none")
+DEFAULT_AI_LAB = os.environ.get("LLM_RACE_AI_LAB", "qwen")
+DEFAULT_MODEL_NAME = os.environ.get("LLM_RACE_MODEL_NAME", "qwen3-8b")
+DEFAULT_QUANTIZATION = os.environ.get("LLM_RACE_QUANTIZATION", "none")
 DEFAULT_PROVIDER = os.environ.get("LLM_RACE_PROVIDER", "vllm")
 DEFAULT_CONCURRENCY = [1, 16, 128, 512]
 DEFAULT_PROMPT_LENGTHS = [64, 512, 2048, 4096]

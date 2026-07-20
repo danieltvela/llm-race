@@ -117,7 +117,7 @@ def test_save_single_scenario(session, system_info, scenario_result, request_met
         session=session,
         run_id="test-run-001",
         provider_type="test_provider",
-        model_name="test-model",
+        model_slug="test-lab/test-model/none",
         workload_profile="single-user",
         system_info=system_info,
         max_tokens=512,
@@ -148,6 +148,13 @@ def test_save_single_scenario(session, system_info, scenario_result, request_met
     assert results[1].request_id == 1
     assert results[0].ttft_ms == 100.0  # 0.1s * 1000
 
+    # Check Model row
+    models = session.execute(select(Model)).scalars().all()
+    assert len(models) == 1
+    assert models[0].slug == "test-lab/test-model/none"
+    assert models[0].ai_lab == "test-lab"
+    assert models[0].name == "test-model"
+
     # Check return value
     assert result == [b.id]
 
@@ -173,7 +180,7 @@ def test_save_multiple_scenarios(session, system_info, scenario_result, request_
         session=session,
         run_id="test-run-002",
         provider_type="test_provider",
-        model_name="test-model",
+        model_slug="test-lab/test-model/none",
         workload_profile=None,
         system_info=system_info,
         max_tokens=256,
@@ -193,23 +200,23 @@ def test_save_multiple_scenarios(session, system_info, scenario_result, request_
 
 
 def test_find_or_create_model(session, system_info, scenario_result, request_metrics_list):
-    """Verify model find-or-create prevents duplicates."""
+    """Verify model find-or-create prevents duplicates by slug."""
     now = datetime.utcnow()
     scenarios = [(scenario_result, request_metrics_list, now)]
 
     # First call
     save_benchmark_run(session=session, run_id="run-1", provider_type="vllm",
-        model_name="gpt-3.5", workload_profile=None, system_info=system_info,
+        model_slug="test-lab/gpt-3-5/none", workload_profile=None, system_info=system_info,
         max_tokens=256, temperature=0.0, top_p=1.0, scenarios=scenarios)
 
-    # Second call with same model/provider
+    # Second call with same slug
     save_benchmark_run(session=session, run_id="run-2", provider_type="vllm",
-        model_name="gpt-3.5", workload_profile=None, system_info=system_info,
+        model_slug="test-lab/gpt-3-5/none", workload_profile=None, system_info=system_info,
         max_tokens=256, temperature=0.0, top_p=1.0, scenarios=scenarios)
 
     models = session.execute(select(Model)).scalars().all()
     assert len(models) == 1
-    assert models[0].name == "gpt-3.5"
+    assert models[0].slug == "test-lab/gpt-3-5/none"
     assert models[0].provider_name == "vllm"
 
 
@@ -220,12 +227,12 @@ def test_find_or_create_machine(session, system_info, scenario_result, request_m
 
     # First call
     save_benchmark_run(session=session, run_id="run-1", provider_type="vllm",
-        model_name="test", workload_profile=None, system_info=system_info,
+        model_slug="test-lab/test/none", workload_profile=None, system_info=system_info,
         max_tokens=256, temperature=0.0, top_p=1.0, scenarios=scenarios)
 
     # Second call with same hostname
     save_benchmark_run(session=session, run_id="run-2", provider_type="vllm",
-        model_name="test", workload_profile=None, system_info=system_info,
+        model_slug="test-lab/test/none", workload_profile=None, system_info=system_info,
         max_tokens=256, temperature=0.0, top_p=1.0, scenarios=scenarios)
 
     machines = session.execute(select(Machine)).scalars().all()
@@ -237,7 +244,7 @@ def test_empty_scenarios(session, system_info):
     """Verify empty scenarios produce no rows."""
     result = save_benchmark_run(
         session=session, run_id="empty", provider_type="test",
-        model_name="test", workload_profile=None, system_info=system_info,
+        model_slug="test-lab/test/none", workload_profile=None, system_info=system_info,
         max_tokens=256, temperature=0.0, top_p=1.0, scenarios=[],
     )
     assert result == []
@@ -253,7 +260,7 @@ def test_db_failure_handling(session, system_info, scenario_result, request_metr
     with patch.object(session, "commit", side_effect=RuntimeError("mock db failure")):
         result = save_benchmark_run(
             session=session, run_id="fail-test", provider_type="test",
-            model_name="test", workload_profile=None, system_info=system_info,
+            model_slug="test-lab/test/none", workload_profile=None, system_info=system_info,
             max_tokens=256, temperature=0.0, top_p=1.0, scenarios=scenarios,
         )
     assert result == []

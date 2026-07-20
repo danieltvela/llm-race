@@ -28,7 +28,10 @@ class TestPresetLoader:
         assert isinstance(preset, dict)
         assert preset["key"] == "qwen3-8b-vllm"
         assert preset["provider"] == "vllm"
-        assert preset["model"] == "Qwen3-8B"
+        assert preset["slug"] == "qwen/qwen3-8b/none"
+        assert preset["ai_lab"] == "qwen"
+        assert preset["model_api_name"] == "Qwen3-8B"
+        assert preset["quantization"] == "none"
 
     def test_load_preset_unknown_key_raises_keyerror(self):
         with pytest.raises(KeyError, match="nonexistent"):
@@ -53,7 +56,7 @@ class TestPresetLoader:
         assert len(presets) == 10
 
     def test_list_presets_each_has_required_fields(self):
-        required = ("key", "name", "provider", "model")
+        required = ("key", "name", "provider", "slug", "ai_lab", "model_api_name", "quantization")
         for preset in list_presets():
             for field in required:
                 assert field in preset, (
@@ -79,10 +82,10 @@ class TestPresetLoader:
             assert isinstance(preset["provider"], str)
             assert len(preset["provider"]) > 0
 
-    def test_all_models_are_string(self):
+    def test_all_slugs_are_string(self):
         for preset in list_presets():
-            assert isinstance(preset["model"], str)
-            assert len(preset["model"]) > 0
+            assert isinstance(preset["slug"], str)
+            assert len(preset["slug"]) > 0
 
     def test_all_names_are_string(self):
         for preset in list_presets():

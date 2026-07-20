@@ -6,15 +6,19 @@
 </nav>
 
 <div class="run-header">
-    <h1>{{ model_name }}</h1>
+    <h1>{{ model_slug }}</h1>
     <div class="run-meta">
+        <span>{{ ai_lab }}</span>
+        <span>&middot;</span>
+        <span>{{ model_name }}</span>
+        <span>&middot;</span>
         <span>{{ provider_name }}</span>
         <span>&middot;</span>
         <span>{{ hostname }}</span>
         <span>&middot;</span>
         <span>{{ workload_profile }}</span>
     </div>
-<div class="run-id-block">
+    <div class="run-id-block">
         <code class="run-id-full">{{ run_id }}</code>
         <button class="copy-btn" onclick="copyRunId('{{ run_id }}', this)" title="Copy run ID">📋</button>
     </div>
@@ -33,19 +37,6 @@
     <pre><code>{{ benchmarks[0].launch_script }}</code></pre>
 </div>
 {% endif %}
-    {% if benchmarks[0].notes %}
-    <div class="run-notes">
-        <h3>Notes</h3>
-        <p>{{ benchmarks[0].notes }}</p>
-    </div>
-    {% endif %}
-    {% if benchmarks[0].launch_script %}
-    <div class="run-launch-script">
-        <h3>Launch Script</h3>
-        <pre><code>{{ benchmarks[0].launch_script }}</code></pre>
-    </div>
-    {% endif %}
-</div>
 
 {% if benchmarks %}
 <div class="table-container">

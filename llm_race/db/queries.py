@@ -70,6 +70,10 @@ def list_benchmarks(
     if filters:
         if filters.model_name:
             query = query.where(Model.name.ilike(f"%{filters.model_name}%"))
+        if filters.slug:
+            query = query.where(Model.slug == filters.slug)
+        if filters.ai_lab:
+            query = query.where(Model.ai_lab == filters.ai_lab)
         if filters.provider_name:
             query = query.where(Model.provider_name == filters.provider_name)
         if filters.machine_hostname:
@@ -154,6 +158,8 @@ def _benchmark_to_detail(b: Benchmark) -> BenchmarkDetail:
         id=b.id,
         run_id=b.run_id,
         model_name=b.model.name if b.model else "",
+        model_slug=b.model.slug if b.model else "",
+        ai_lab=b.model.ai_lab if b.model else "",
         provider_name=b.model.provider_name if b.model else "",
         hostname=b.machine.hostname if b.machine else "",
         workload_profile=b.workload_profile,
@@ -243,7 +249,7 @@ def timeseries(
 
     Args:
         session: SQLAlchemy ORM session.
-        model: Optional model name filter (LIKE match).
+        model: Optional model filter (LIKE match on slug or name).
         provider: Optional provider name filter (exact match).
         metric: Metric column name (must be in the appropriate whitelist).
         date_start: Optional start date filter.
@@ -284,7 +290,9 @@ def _timeseries_benchmark(
     )
 
     if model:
-        query = query.where(Model.name.ilike(f"%{model}%"))
+        query = query.where(
+            (Model.slug.ilike(f"%{model}%")) | (Model.name.ilike(f"%{model}%"))
+        )
     if provider:
         query = query.where(Model.provider_name == provider)
     if date_start:
@@ -326,7 +334,9 @@ def _timeseries_result(
     )
 
     if model:
-        query = query.where(Model.name.ilike(f"%{model}%"))
+        query = query.where(
+            (Model.slug.ilike(f"%{model}%")) | (Model.name.ilike(f"%{model}%"))
+        )
     if provider:
         query = query.where(Model.provider_name == provider)
     if date_start:
@@ -400,6 +410,8 @@ def list_benchmark_groups(
         select(
             Benchmark.run_id,
             Model.name.label("model_name"),
+            Model.slug.label("model_slug"),
+            Model.ai_lab.label("ai_lab"),
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
@@ -416,12 +428,24 @@ def list_benchmark_groups(
         )
         .join(Model, Benchmark.model_id == Model.id)
         .join(Machine, Benchmark.machine_id == Machine.id)
-        .group_by(Benchmark.run_id, Model.name, Model.provider_name, Machine.hostname, Benchmark.workload_profile)
+        .group_by(
+            Benchmark.run_id,
+            Model.name,
+            Model.slug,
+            Model.ai_lab,
+            Model.provider_name,
+            Machine.hostname,
+            Benchmark.workload_profile,
+        )
     )
 
     if filters:
         if filters.model_name:
             query = query.where(Model.name.ilike(f"%{filters.model_name}%"))
+        if filters.slug:
+            query = query.where(Model.slug == filters.slug)
+        if filters.ai_lab:
+            query = query.where(Model.ai_lab == filters.ai_lab)
         if filters.provider_name:
             query = query.where(Model.provider_name == filters.provider_name)
         if filters.machine_hostname:
@@ -477,6 +501,8 @@ def _row_to_group_summary(r) -> BenchmarkGroupSummary:
     return BenchmarkGroupSummary(
         run_id=r.run_id,
         model_name=r.model_name,
+        model_slug=r.model_slug,
+        ai_lab=r.ai_lab,
         provider_name=r.provider_name,
         hostname=r.hostname,
         workload_profile=r.workload_profile or "",
@@ -520,6 +546,8 @@ def _benchmark_to_summary(b: Benchmark) -> BenchmarkSummary:
         id=b.id,
         run_id=b.run_id,
         model_name=b.model.name if b.model else "",
+        model_slug=b.model.slug if b.model else "",
+        ai_lab=b.model.ai_lab if b.model else "",
         provider_name=b.model.provider_name if b.model else "",
         hostname=b.machine.hostname if b.machine else "",
         workload_profile=b.workload_profile,
@@ -545,13 +573,15 @@ def list_models(
     session: Session,
     search: str | None = None,
     provider: str | None = None,
+    ai_lab: str | None = None,
 ) -> list[ModelSummary]:
     """List all models with their benchmark counts.
 
     Args:
         session: SQLAlchemy ORM session.
-        search: Optional model name search (LIKE match).
+        search: Optional search (LIKE match on slug, name, or ai_lab).
         provider: Optional provider name filter (exact match).
+        ai_lab: Optional AI lab filter (exact match).
 
     Returns:
         List of ModelSummary ordered by name.
@@ -559,9 +589,11 @@ def list_models(
     query = (
         select(
             Model.id,
+            Model.slug,
+            Model.ai_lab,
             Model.name,
-            Model.version,
             Model.quantization,
+            Model.extra,
             Model.provider_name,
             Model.context_window,
             func.count(Benchmark.id).label("benchmark_count"),
@@ -569,28 +601,38 @@ def list_models(
         .outerjoin(Benchmark, Model.id == Benchmark.model_id)
         .group_by(
             Model.id,
+            Model.slug,
+            Model.ai_lab,
             Model.name,
-            Model.version,
             Model.quantization,
+            Model.extra,
             Model.provider_name,
             Model.context_window,
         )
-        .order_by(asc(Model.provider_name), asc(Model.name))
+        .order_by(asc(Model.ai_lab), asc(Model.slug))
     )
 
     if search:
-        query = query.having(Model.name.ilike(f"%{search}%"))
+        query = query.having(
+            Model.slug.ilike(f"%{search}%") |
+            Model.name.ilike(f"%{search}%") |
+            Model.ai_lab.ilike(f"%{search}%")
+        )
     if provider:
         query = query.having(Model.provider_name == provider)
+    if ai_lab:
+        query = query.having(Model.ai_lab == ai_lab)
 
     rows = session.execute(query).all()
 
     return [
         ModelSummary(
             id=row.id,
+            slug=row.slug,
+            ai_lab=row.ai_lab,
             name=row.name,
-            version=row.version,
             quantization=row.quantization,
+            extra=row.extra,
             provider_name=row.provider_name,
             context_window=row.context_window,
             benchmark_count=row.benchmark_count,
@@ -640,6 +682,8 @@ def get_model_benchmarks(
         select(
             Benchmark.run_id,
             Model.name.label("model_name"),
+            Model.slug.label("model_slug"),
+            Model.ai_lab.label("ai_lab"),
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
@@ -657,7 +701,15 @@ def get_model_benchmarks(
         .join(Model, Benchmark.model_id == Model.id)
         .join(Machine, Benchmark.machine_id == Machine.id)
         .where(Model.id == model_id)
-        .group_by(Benchmark.run_id, Model.name, Model.provider_name, Machine.hostname, Benchmark.workload_profile)
+        .group_by(
+            Benchmark.run_id,
+            Model.name,
+            Model.slug,
+            Model.ai_lab,
+            Model.provider_name,
+            Machine.hostname,
+            Benchmark.workload_profile,
+        )
     )
 
     # Count

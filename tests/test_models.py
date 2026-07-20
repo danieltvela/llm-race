@@ -41,9 +41,10 @@ def db_session():
 def _create_minimal_model(session: object) -> Model:
     """Create and return a minimal Model record."""
     m = Model(
+        slug="test-lab/test-model/none",
+        ai_lab="test-lab",
         name="test-model",
-        version="1.0",
-        quantization="FP8",
+        quantization="none",
         provider_name="vllm",
         context_window=4096,
     )
@@ -116,9 +117,10 @@ def test_init_db_creates_tables(db_session) -> None:
 def test_create_model(db_session) -> None:
     """Create and verify a Model record."""
     model = Model(
+        slug="test-lab/test-model/none",
+        ai_lab="test-lab",
         name="test-model",
-        version="1.0",
-        quantization="FP8",
+        quantization="none",
         provider_name="vllm",
         context_window=4096,
     )
@@ -126,20 +128,22 @@ def test_create_model(db_session) -> None:
     db_session.commit()
 
     assert model.id is not None
+    assert model.slug == "test-lab/test-model/none"
+    assert model.ai_lab == "test-lab"
     assert model.name == "test-model"
-    assert model.version == "1.0"
-    assert model.quantization == "FP8"
+    assert model.quantization == "none"
     assert model.provider_name == "vllm"
     assert model.context_window == 4096
     assert model.created_at is not None
 
 
 def test_model_unique_constraint(db_session) -> None:
-    """Verify duplicate Model raises IntegrityError."""
+    """Verify duplicate slug raises IntegrityError."""
     data = dict(
-        name="dup",
-        version="1",
-        quantization="FP8",
+        slug="dup/dup-model/none",
+        ai_lab="dup",
+        name="dup-model",
+        quantization="none",
         provider_name="test",
     )
     db_session.add(Model(**data))

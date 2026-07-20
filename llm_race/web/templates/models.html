@@ -7,7 +7,7 @@
     <div class="filter-group">
         <label for="search">Search</label>
         <input type="text" id="search" name="search"
-               value="{{ search }}" placeholder="Search model name...">
+               value="{{ search }}" placeholder="Search by slug or name...">
     </div>
     <div class="filter-group">
         <label for="provider">Provider</label>
@@ -15,6 +15,15 @@
             <option value="">All</option>
             {% for p in provider_names %}
             <option value="{{ p }}" {% if provider == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-group">
+        <label for="ai_lab">AI Lab</label>
+        <select id="ai_lab" name="ai_lab">
+            <option value="">All</option>
+            {% for lab in ai_lab_names %}
+            <option value="{{ lab }}" {% if ai_lab == lab %}selected{% endif %}>{{ lab }}</option>
             {% endfor %}
         </select>
     </div>
@@ -29,9 +38,10 @@
     <table class="table">
         <thead>
             <tr>
+                <th>AI Lab</th>
+                <th>Slug</th>
                 <th>Model</th>
                 <th>Provider</th>
-                <th>Version</th>
                 <th>Quantization</th>
                 <th>Context Window</th>
                 <th>Benchmarks</th>
@@ -40,9 +50,10 @@
         <tbody>
             {% for m in models %}
             <tr class="clickable" onclick="window.location='/model/{{ m.id }}'">
+                <td>{{ m.ai_lab }}</td>
+                <td><code>{{ m.slug }}</code></td>
                 <td>{{ m.name }}</td>
                 <td>{{ m.provider_name }}</td>
-                <td>{{ m.version if m.version else '-' }}</td>
                 <td>{{ m.quantization if m.quantization else '-' }}</td>
                 <td>{{ m.context_window if m.context_window else '-' }}</td>
                 <td>{{ m.benchmark_count }}</td>

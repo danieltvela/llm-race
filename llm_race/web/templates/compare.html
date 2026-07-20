@@ -6,8 +6,8 @@
 <form method="GET" action="/compare" class="filter-form">
     <div class="filter-group">
         <label for="run_id">Run IDs (2-4, comma-separated)</label>
-        <input type="text" id="run_id" name="run_id" 
-               value="{{ run_ids|join(',') if run_ids else '' }}" 
+        <input type="text" id="run_id" name="run_id"
+               value="{{ run_ids|join(',') if run_ids else '' }}"
                placeholder="e.g. uuid-1, uuid-2, uuid-3" style="width: 100%; font-family: monospace;">
     </div>
     <div class="filter-actions">
@@ -30,7 +30,7 @@
             <tr>
                 <th>Metric</th>
                 {% for run in runs %}
-                <th>{{ run.model_name }}<br><small>{{ run.run_id[:8] }}...</small></th>
+                <th>{{ run.model_slug }}<br><small>{{ run.run_id[:8] }}...</small></th>
                 {% endfor %}
             </tr>
         </thead>
@@ -50,7 +50,9 @@
 <div class="run-details">
     {% for run in runs %}
     <details>
-        <summary>{{ run.model_name }} — {{ run.hostname }} ({{ run.run_id[:8] }})</summary>
+        <summary>{{ run.model_slug }} — {{ run.hostname }} ({{ run.run_id[:8] }})</summary>
+        <p><strong>AI Lab:</strong> {{ run.ai_lab }}</p>
+        <p><strong>Model:</strong> {{ run.model_name }}</p>
         <p><strong>Provider:</strong> {{ run.provider_name }}</p>
         <p><strong>Workload:</strong> {{ run.workload_profile }}</p>
         <p><strong>Concurrency:</strong> {{ run.concurrency }}</p>

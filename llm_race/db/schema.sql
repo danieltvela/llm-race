@@ -3,13 +3,15 @@
 
 CREATE TABLE IF NOT EXISTS models (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug VARCHAR(500) NOT NULL,
+    ai_lab VARCHAR(100) NOT NULL,
     name VARCHAR(255) NOT NULL,
-    version VARCHAR(50),
     quantization VARCHAR(50),
+    extra VARCHAR(100),
     provider_name VARCHAR(100) NOT NULL,
     context_window INTEGER,
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
-    UNIQUE(name, version, quantization, provider_name)
+    UNIQUE(slug)
 );
 
 CREATE TABLE IF NOT EXISTS machines (

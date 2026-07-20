@@ -167,17 +167,21 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
         """Render the models list page."""
         search = params.get("search", [None])[0]
         provider = params.get("provider", [None])[0]
+        ai_lab = params.get("ai_lab", [None])[0]
 
         with _get_db_session() as session:
-            models = list_models(session, search=search, provider=provider)
+            models = list_models(session, search=search, provider=provider, ai_lab=ai_lab)
             provider_names = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
+            ai_labs = [row[0] for row in session.query(Model.ai_lab).distinct().order_by(Model.ai_lab).all()]
 
             html = jinja_env.get_template("models.html").render(
                 models=models,
                 total_count=len(models),
                 search=search or "",
                 provider=provider or "",
+                ai_lab=ai_lab or "",
                 provider_names=provider_names,
+                ai_lab_names=ai_labs,
             )
 
         self._send_html(html)
@@ -227,6 +231,8 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
 
     def handle_index(self, params: dict[str, list[str]]) -> None:
         model_name = params.get("model_name", [None])[0]
+        slug = params.get("slug", [None])[0]
+        ai_lab = params.get("ai_lab", [None])[0]
         provider_name = params.get("provider_name", [None])[0]
         machine_hostname = params.get("machine_hostname", [None])[0]
         date_start_str = params.get("date_start", [None])[0]
@@ -245,6 +251,8 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
 
         filters = BenchmarkFilters(
             model_name=model_name,
+            slug=slug,
+            ai_lab=ai_lab,
             provider_name=provider_name,
             machine_hostname=machine_hostname,
             date_start=date_start,
@@ -268,10 +276,11 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             has_prev = page > 1
             has_next = page < total_pages
 
-            model_names = [row[0] for row in session.query(Model.name).distinct().order_by(Model.name).all()]
+            model_slugs = [row[0] for row in session.query(Model.slug).distinct().order_by(Model.slug).all()]
             provider_names = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
             machine_hostnames = [row[0] for row in session.query(Machine.hostname).distinct().order_by(Machine.hostname).all()]
             workload_profiles = [row[0] for row in session.query(Benchmark.workload_profile).distinct().order_by(Benchmark.workload_profile).all()]
+            ai_labs = [row[0] for row in session.query(Model.ai_lab).distinct().order_by(Model.ai_lab).all()]
 
             html = jinja_env.get_template("index.html").render(
                 benchmarks=result.items,
@@ -284,10 +293,11 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
                 prev_page=page - 1 if has_prev else 1,
                 next_page=page + 1 if has_next else page,
                 filters=filters,
-                model_names=model_names,
+                model_slugs=model_slugs,
                 provider_names=provider_names,
                 machine_hostnames=machine_hostnames,
                 workload_profiles=workload_profiles,
+                ai_lab_names=ai_labs,
                 sort_by=sort_by,
                 sort_order=sort_order,
             )
@@ -350,7 +360,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
                 return
 
             metrics_table = OrderedDict()
-            metrics_table["Model"] = [r.model_name for r in runs]
+            metrics_table["Model"] = [f"{r.model_slug}" for r in runs]
             metrics_table["Provider"] = [r.provider_name for r in runs]
             metrics_table["Machine"] = [r.hostname for r in runs]
             metrics_table["PP (tok/s)"] = [
@@ -378,7 +388,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
                 data = [metrics_table[m][i] for m in chart_metrics]
                 chart_datasets.append(
                     {
-                        "label": run.model_name[:20],
+                        "label": run.model_slug[:30],
                         "data": data,
                         "backgroundColor": color,
                         "borderColor": color,
@@ -408,6 +418,8 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
         html = jinja_env.get_template("run_detail.html").render(
             run_id=run_id,
             model_name=first.model_name,
+            model_slug=first.model_slug,
+            ai_lab=first.ai_lab,
             provider_name=first.provider_name,
             hostname=first.hostname,
             workload_profile=first.workload_profile,
@@ -434,7 +446,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
         }
 
         with _get_db_session() as session:
-            model_options = [row[0] for row in session.query(Model.name).distinct().order_by(Model.name).all()]
+            model_options = [row[0] for row in session.query(Model.slug).distinct().order_by(Model.slug).all()]
             provider_options = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
 
             if metric not in allowed_metrics:
@@ -497,14 +509,14 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             if run_id:
                 detail_rows = compare_runs(session, [run_id])
                 writer.writerow([
-                    "run_id", "model_name", "provider_name", "hostname",
+                    "run_id", "model_slug", "model_name", "provider_name", "hostname",
                     "workload_profile", "prompt_size", "concurrency",
                     "started_at", "completed_at",
                     "pp_mean", "throughput_tps", "ttft_mean_ms", "status",
                 ])
                 for dr in detail_rows:
                     writer.writerow([
-                        dr.run_id, dr.model_name, dr.provider_name, dr.hostname,
+                        dr.run_id, dr.model_slug, dr.model_name, dr.provider_name, dr.hostname,
                         dr.workload_profile, dr.prompt_size, dr.concurrency,
                         dr.started_at.isoformat() if dr.started_at else "",
                         dr.completed_at.isoformat() if dr.completed_at else "",
@@ -513,14 +525,14 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             else:
                 result = list_benchmark_groups(session, filters=None, offset=0, limit=10000)
                 writer.writerow([
-                    "run_id", "model_name", "provider_name", "hostname",
+                    "run_id", "model_slug", "model_name", "provider_name", "hostname",
                     "workload_profile", "scenario_count",
                     "started_at", "completed_at",
                     "best_pp", "best_throughput_tps", "avg_ttft_mean_ms", "status",
                 ])
                 for gr in result.items:
                     writer.writerow([
-                        gr.run_id, gr.model_name, gr.provider_name, gr.hostname,
+                        gr.run_id, gr.model_slug, gr.model_name, gr.provider_name, gr.hostname,
                         gr.workload_profile, gr.scenario_count,
                         gr.started_at.isoformat() if gr.started_at else "",
                         gr.completed_at.isoformat() if gr.completed_at else "",

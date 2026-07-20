@@ -89,7 +89,7 @@ async def run_scenario(
 
     Args:
         provider: Any ``Provider`` subclass.
-        model: Model identifier (e.g. ``"Qwen3.6-35B-A3B-FP8"``).
+        model: Model identifier sent to the provider API.
         concurrency: Number of simultaneous requests per batch.
         prompt_length: Target prompt token count.
         max_tokens: Max completion tokens per request.
@@ -286,7 +286,8 @@ def _build_scenario_result(
 
 async def run_benchmarks(
     provider: Provider,
-    model: str,
+    model_slug: str,
+    model_api_name: str,
     concurrency: list[int],
     prompt_lengths: list[int],
     max_tokens: int,
@@ -307,7 +308,8 @@ async def run_benchmarks(
 
     Args:
         provider: Any ``Provider`` subclass.
-        model: Model identifier.
+        model_slug: Model slug identifier (e.g. "qwen/qwen3-8b/none").
+        model_api_name: Model name to send to the provider API.
         concurrency: List of concurrency levels to test.
         prompt_lengths: List of prompt token counts to test.
         max_tokens: Max completion tokens per request.
@@ -331,7 +333,8 @@ async def run_benchmarks(
     logger.info("LLM Race Benchmark")
     logger.info("=" * 80)
     logger.info("  Provider:       %s", type(provider).__name__)
-    logger.info("  Model:          %s", model)
+    logger.info("  Model slug:     %s", model_slug)
+    logger.info("  Model API name: %s", model_api_name)
     logger.info("  Concurrency:    %s", concurrency)
     logger.info("  Prompt lengths: %s", prompt_lengths)
     logger.info("  Max tokens:     %d", max_tokens)
@@ -351,7 +354,7 @@ async def run_benchmarks(
         ]
         async with httpx.AsyncClient(timeout=provider.timeout) as warmup_client:
             warmup_result = await provider.stream_complete(
-                model=model,
+                model=model_api_name,
                 messages=warmup_messages,
                 max_tokens=1,
                 temperature=temperature,
@@ -372,7 +375,7 @@ async def run_benchmarks(
             started_at = datetime.utcnow()
             metrics, wall_elapsed = await run_scenario(
                 provider=provider,
-                model=model,
+                model=model_api_name,
                 concurrency=conc,
                 prompt_length=prompt_len,
                 max_tokens=max_tokens,
@@ -408,7 +411,7 @@ async def run_benchmarks(
                     session=session,
                     run_id=run_id,
                     provider_type=provider_type,
-                    model_name=model,
+                    model_slug=model_slug,
                     workload_profile=workload_profile,
                     system_info=system_info,
                     max_tokens=max_tokens,

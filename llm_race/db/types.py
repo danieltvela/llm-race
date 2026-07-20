@@ -15,6 +15,8 @@ class BenchmarkGroupSummary:
 
     run_id: str
     model_name: str
+    model_slug: str
+    ai_lab: str
     provider_name: str
     hostname: str
     workload_profile: str
@@ -35,6 +37,8 @@ class BenchmarkFilters:
     """Filters for querying benchmarks."""
 
     model_name: str | None = None
+    slug: str | None = None
+    ai_lab: str | None = None
     provider_name: str | None = None
     machine_hostname: str | None = None
     date_start: datetime | None = None
@@ -51,6 +55,8 @@ class BenchmarkSummary:
     id: int
     run_id: str
     model_name: str
+    model_slug: str
+    ai_lab: str
     provider_name: str
     hostname: str
     workload_profile: str
@@ -128,9 +134,11 @@ class ModelSummary:
     """Summary view of a model with benchmark count."""
 
     id: int
+    slug: str
+    ai_lab: str
     name: str
-    version: str | None
     quantization: str | None
+    extra: str | None
     provider_name: str
     context_window: int | None
     benchmark_count: int

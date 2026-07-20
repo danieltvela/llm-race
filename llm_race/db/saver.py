@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from llm_race.bench.runner import RequestMetrics, ScenarioResult
 from llm_race.db.models import Machine, Model, Benchmark, Result
+from llm_race.utils.slug import parse_slug
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ def save_benchmark_run(
     *,
     run_id: str,
     provider_type: str,
-    model_name: str,
+    model_slug: str,
     workload_profile: str | None,
     system_info: dict[str, Any],
     max_tokens: int,
@@ -48,7 +49,7 @@ def save_benchmark_run(
         session: SQLAlchemy session.
         run_id: Unique run identifier (UUID4 string).
         provider_type: Provider name (e.g. "openai", "anthropic").
-        model_name: Model identifier.
+        model_slug: Model slug identifier (e.g. "qwen/qwen3-8b/none").
         workload_profile: Optional workload profile name.
         system_info: Dict from SystemInfo.to_dict() with machine specs.
         max_tokens: Maximum generation tokens.
@@ -66,17 +67,17 @@ def save_benchmark_run(
         return []
 
     # Step 1 — Find or create Model record.
+    parsed = parse_slug(model_slug)
     model_record = session.execute(
-        select(Model).where(
-            Model.name == model_name,
-            Model.version.is_(None),
-            Model.quantization.is_(None),
-            Model.provider_name == provider_type,
-        )
+        select(Model).where(Model.slug == model_slug)
     ).scalar_one_or_none()
     if model_record is None:
         model_record = Model(
-            name=model_name,
+            slug=model_slug,
+            ai_lab=parsed["ai_lab"],
+            name=parsed["name"],
+            quantization=parsed["quantization"],
+            extra=parsed.get("extra"),
             provider_name=provider_type,
         )
         session.add(model_record)

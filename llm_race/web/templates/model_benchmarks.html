@@ -1,22 +1,26 @@
 {% extends "base.html" %}
-{% block title %}{{ model.name }} — Benchmarks{% endblock %}
+{% block title %}{{ model.slug }} — Benchmarks{% endblock %}
 {% block content %}
 <nav aria-label="Breadcrumb" class="breadcrumb">
     <a href="/models">← Models</a>
 </nav>
 
 <div class="run-header">
-    <h1>{{ model.name }}</h1>
+    <h1>{{ model.slug }}</h1>
     <div class="run-meta">
-        <span>{{ model.provider_name }}</span>
-        {% if model.version %}
+        <span>{{ model.ai_lab }}</span>
         <span>&middot;</span>
-        <span>{{ model.version }}</span>
-        {% endif %}
+        <span>{{ model.name }}</span>
         {% if model.quantization %}
         <span>&middot;</span>
         <span>{{ model.quantization }}</span>
         {% endif %}
+        {% if model.extra %}
+        <span>&middot;</span>
+        <span>{{ model.extra }}</span>
+        {% endif %}
+        <span>&middot;</span>
+        <span>{{ model.provider_name }}</span>
     </div>
 </div>
 

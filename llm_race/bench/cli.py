@@ -14,15 +14,16 @@ from llm_race.config import (
     DEFAULT_CONCURRENCY,
     DEFAULT_MAX_TOKENS,
     DEFAULT_MEASURED_ITERATIONS,
-    DEFAULT_MODEL,
-    DEFAULT_PROMPT_LENGTHS,
+    DEFAULT_MODEL_SLUG,
     DEFAULT_PROVIDER,
+    DEFAULT_PROMPT_LENGTHS,
     DEFAULT_REQUEST_TIMEOUT,
     DEFAULT_TEMPERATURE,
     DEFAULT_TOP_P,
     DEFAULT_WARMUP_ITERATIONS,
     create_provider,
 )
+from llm_race.utils.slug import build_slug, parse_slug, validate_slug
 from llm_race.utils.system import collect_system_info
 
 
@@ -37,7 +38,35 @@ def main() -> None:
         help="Provider type (vllm, openai, anthropic, ollama, …) [default: %(default)s]",
     )
     run_parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
-    run_parser.add_argument("--model", default=DEFAULT_MODEL)
+
+    # Model identification: --slug or individual flags
+    model_group = run_parser.add_mutually_exclusive_group()
+    model_group.add_argument(
+        "--slug",
+        default=None,
+        help="Model slug (e.g. qwen/qwen3-8b/none)",
+    )
+    model_group.add_argument(
+        "--ai-lab",
+        default=None,
+        help="AI lab / organization (e.g. qwen, meta, google). Implies --name and --quantization.",
+    )
+    run_parser.add_argument(
+        "--name",
+        default=None,
+        help="Model name (e.g. qwen3-8b, llama-3.2-3b). Used with --ai-lab.",
+    )
+    run_parser.add_argument(
+        "--quantization",
+        default=None,
+        help="Quantization type (e.g. fp8, int8, none). Used with --ai-lab.",
+    )
+    run_parser.add_argument(
+        "--extra",
+        default=None,
+        help="Optional extra modifier (e.g. agent-bench). Used with --ai-lab.",
+    )
+
     run_parser.add_argument(
         "--concurrency", type=int, nargs="+", default=DEFAULT_CONCURRENCY
     )
@@ -105,10 +134,13 @@ def main() -> None:
         from llm_race.config.presets import list_presets as _list_presets
         presets = _list_presets()
         for p in presets:
-            print(f"{p['key']}: {p['name']} ({p['provider']}/{p['model']})")
+            print(f"{p['key']}: {p['name']} ({p['slug']})")
         return
 
     # Handle --preset: load and merge with explicit CLI flags.
+    model_slug: str | None = None
+    model_api_name: str | None = None
+
     if args.preset:
         try:
             from llm_race.config import list_presets as _list_all
@@ -117,19 +149,47 @@ def main() -> None:
         except KeyError:
             print(f"Error: unknown preset {args.preset!r}. Available presets:")
             for p in _list_all():
-                print(f"  {p['key']}: {p['name']} ({p['provider']})")
+                print(f"  {p['key']}: {p['name']} ({p['slug']})")
             sys.exit(1)
         # Preset acts as defaults; explicit CLI flags override.
-        def _is_default(val: str, default: str) -> bool:
-            return val == default
+        def _is_default(val: str | None, default: str) -> bool:
+            return val is None or val == default
 
         if _is_default(args.provider, DEFAULT_PROVIDER) and "provider" in preset:
             args.provider = preset["provider"]
-        if _is_default(args.model, DEFAULT_MODEL) and "model" in preset:
-            args.model = preset["model"]
+        if not model_slug and "slug" in preset:
+            model_slug = preset["slug"]
+        if not model_api_name and "model_api_name" in preset:
+            model_api_name = preset["model_api_name"]
         if _is_default(args.base_url, DEFAULT_BASE_URL) and "base_url" in preset:
             args.base_url = preset["base_url"]
+
+    # Resolve model slug from --slug or individual flags
+    if model_slug is None:
+        if args.slug:
+            model_slug = args.slug
+        elif args.ai_lab and args.name and args.quantization:
+            model_slug = build_slug(args.ai_lab, args.name, args.quantization, args.extra)
+            model_api_name = args.name
+        else:
+            model_slug = DEFAULT_MODEL_SLUG
+            model_api_name = parse_slug(model_slug)["name"]
+
+    assert model_slug is not None, "Model slug must be resolved"
+
+    # Validate slug
+    if not validate_slug(model_slug):
+        print(f"Error: invalid model slug: {model_slug!r}")
+        print("Expected format: {ai_lab}/{name}/{quantization}[/extra]")
+        sys.exit(1)
+
+    # Resolve API model name from slug if not already set by preset
+    if model_api_name is None:
+        model_api_name = parse_slug(model_slug)["name"]
+
     logger = logging.getLogger(__name__)
+
+    assert model_api_name is not None, "Model API name must be resolved"
 
     # Resolve concurrency and prompt_lengths from workload profile if set.
     if args.workload:
@@ -159,10 +219,6 @@ def main() -> None:
         provider_type = args.provider
         effective_run_id = run_id
 
-    # Note: --force-detect is accepted but currently a no-op.
-    # System info is collected fresh each run; caching will be added
-    # when needed to avoid repeated nvidia-smi calls.
-
     # Read launch script content from file if provided.
     launch_script_content = ""
     if args.launch_script:
@@ -175,7 +231,8 @@ def main() -> None:
     asyncio.run(
         run_benchmarks(
             provider=provider,
-            model=args.model,
+            model_slug=model_slug,
+            model_api_name=model_api_name,
             concurrency=concurrency,
             prompt_lengths=prompt_lengths,
             max_tokens=args.max_tokens,

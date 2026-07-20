@@ -42,27 +42,24 @@ class Base(DeclarativeBase):
 
 
 class Model(Base):
-    """Represents an LLM model (name, version, quantization, provider)."""
+    """Represents an LLM model identified by a structured slug.
+
+    The slug is the canonical unique identifier composed of
+    ``{ai_lab}/{name}/{quantization}`` or
+    ``{ai_lab}/{name}/{quantization}/{extra}``.
+    """
 
     __tablename__ = "models"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    slug: Mapped[str] = mapped_column(String(500), nullable=False, unique=True)
+    ai_lab: Mapped[str] = mapped_column(String(100), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     quantization: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    extra: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     provider_name: Mapped[str] = mapped_column(String(100), nullable=False)
     context_window: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
-
-    __table_args__ = (
-        UniqueConstraint(
-            "name",
-            "version",
-            "quantization",
-            "provider_name",
-            name="uq_model",
-        ),
-    )
 
     benchmarks: Mapped[list[Benchmark]] = relationship(
         back_populates="model", lazy="selectin"
