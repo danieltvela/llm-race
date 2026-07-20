@@ -273,7 +273,34 @@ def test_benchmark_defaults(db_session) -> None:
     assert benchmark.throughput_tps is None
     assert benchmark.e2e_mean_ms is None
     assert benchmark.error_message is None
+    assert benchmark.notes == ""
+    assert benchmark.launch_script == ""
     assert benchmark.created_at is not None
+
+
+def test_benchmark_notes_and_launch_script(db_session) -> None:
+    """Verify notes and launch_script fields store custom values."""
+    model = _create_minimal_model(db_session)
+    machine = _create_minimal_machine(db_session)
+
+    benchmark = Benchmark(
+        model_id=model.id,
+        machine_id=machine.id,
+        workload_profile="single-user",
+        prompt_size="medium",
+        concurrency=1,
+        max_tokens=256,
+        temperature=0.0,
+        top_p=1.0,
+        started_at=datetime.utcnow(),
+        notes="Test run with custom settings",
+        launch_script="#!/bin/bash\npython train.py --epochs 10",
+    )
+    db_session.add(benchmark)
+    db_session.commit()
+
+    assert benchmark.notes == "Test run with custom settings"
+    assert benchmark.launch_script == "#!/bin/bash\npython train.py --epochs 10"
 
 
 # ---------------------------------------------------------------------------

@@ -146,6 +146,8 @@ class Benchmark(Base):
     pp_p99: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="running")
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    launch_script: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
 
     model: Mapped[Model] = relationship(back_populates="benchmarks")

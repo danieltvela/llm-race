@@ -300,6 +300,8 @@ async def run_benchmarks(
     run_id: str | None = None,
     system_info: dict[str, Any] | None = None,
     provider_type: str | None = None,
+    notes: str = "",
+    launch_script: str = "",
 ) -> list[ScenarioResult]:
     """Run the full benchmark suite across all concurrency × prompt combinations.
 
@@ -317,6 +319,8 @@ async def run_benchmarks(
         run_id: Unique run identifier. When provided, results are saved to DB.
         system_info: Dict from SystemInfo.to_dict(). Required when run_id is set.
         provider_type: Provider string (e.g. "vllm"). Required when run_id is set.
+        notes: Optional free-form notes attached to the benchmark run.
+        launch_script: Optional launch script content attached to the benchmark run.
 
     Returns:
         List of ``ScenarioResult``, one per combination.
@@ -414,6 +418,8 @@ async def run_benchmarks(
                         (sr, metrics, started)
                         for sr, metrics, started in zip(all_results, all_scenario_metrics, all_started_at)
                     ],
+                    notes=notes,
+                    launch_script=launch_script,
                 )
         except Exception:
             logger.warning("Failed to save benchmark results to DB", exc_info=True)

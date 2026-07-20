@@ -26,6 +26,8 @@ class BenchmarkGroupSummary:
     avg_ttft_mean_ms: float | None
     avg_e2e_mean_ms: float | None
     status: str
+    notes: str
+    launch_script: str
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,8 @@ class BenchmarkSummary:
     ttft_mean_ms: float | None
     e2e_mean_ms: float | None
     status: str
+    notes: str
+    launch_script: str
 
 
 @dataclass(frozen=True)

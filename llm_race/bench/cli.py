@@ -5,6 +5,7 @@ import asyncio
 import logging
 import sys
 import uuid
+from pathlib import Path
 
 from llm_race.bench.runner import run_benchmarks
 from llm_race.bench.workloads import WORKLOAD_REGISTRY, get_workload
@@ -86,6 +87,16 @@ def main() -> None:
         action="store_true",
         help="List all available presets and exit",
     )
+    run_parser.add_argument(
+        "--notes",
+        default="",
+        help="Free-form notes attached to the benchmark run",
+    )
+    run_parser.add_argument(
+        "--launch-script",
+        default=None,
+        help="Path to a launch script file to store with the benchmark",
+    )
 
     args = parser.parse_args()
 
@@ -152,6 +163,15 @@ def main() -> None:
     # System info is collected fresh each run; caching will be added
     # when needed to avoid repeated nvidia-smi calls.
 
+    # Read launch script content from file if provided.
+    launch_script_content = ""
+    if args.launch_script:
+        try:
+            launch_script_content = Path(args.launch_script).read_text(encoding="utf-8")
+        except OSError as exc:
+            print(f"Error: could not read launch script file: {exc}")
+            sys.exit(1)
+
     asyncio.run(
         run_benchmarks(
             provider=provider,
@@ -168,6 +188,8 @@ def main() -> None:
             run_id=effective_run_id,
             system_info=system_info,
             provider_type=provider_type,
+            notes=args.notes,
+            launch_script=launch_script_content,
         )
     )
 

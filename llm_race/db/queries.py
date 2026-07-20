@@ -169,6 +169,8 @@ def _benchmark_to_detail(b: Benchmark) -> BenchmarkDetail:
         ttft_mean_ms=b.ttft_mean_ms,
         e2e_mean_ms=b.e2e_mean_ms,
         status=b.status,
+        notes=b.notes,
+        launch_script=b.launch_script,
         # Extended fields (BenchmarkDetail-specific, beyond BenchmarkSummary)
         throughput_rps=b.throughput_rps,
         e2e_p50_ms=b.e2e_p50_ms,
@@ -408,6 +410,8 @@ def list_benchmark_groups(
             func.avg(Benchmark.ttft_mean_ms).label("avg_ttft_mean_ms"),
             func.avg(Benchmark.e2e_mean_ms).label("avg_e2e_mean_ms"),
             group_status.label("status"),
+            func.min(Benchmark.notes).label("notes"),
+            func.min(Benchmark.launch_script).label("launch_script"),
         )
         .join(Model, Benchmark.model_id == Model.id)
         .join(Machine, Benchmark.machine_id == Machine.id)
@@ -487,6 +491,8 @@ def _row_to_group_summary(r) -> BenchmarkGroupSummary:
             round(float(r.avg_e2e_mean_ms), 2) if r.avg_e2e_mean_ms is not None else None
         ),
         status=r.status,
+        notes=r.notes or "",
+        launch_script=r.launch_script or "",
     )
 
 
@@ -529,4 +535,6 @@ def _benchmark_to_summary(b: Benchmark) -> BenchmarkSummary:
         ttft_mean_ms=b.ttft_mean_ms,
         e2e_mean_ms=b.e2e_mean_ms,
         status=b.status,
+        notes=b.notes,
+        launch_script=b.launch_script,
     )

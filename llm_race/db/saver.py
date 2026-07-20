@@ -39,6 +39,8 @@ def save_benchmark_run(
     temperature: float,
     top_p: float,
     scenarios: list[tuple[ScenarioResult, list[RequestMetrics], datetime]],
+    notes: str = "",
+    launch_script: str = "",
 ) -> list[int]:
     """Persist benchmark results to the database.
 
@@ -54,6 +56,8 @@ def save_benchmark_run(
         top_p: Top-p sampling value.
         scenarios: List of (ScenarioResult, list[RequestMetrics], started_at)
             triples — one per (concurrency, prompt_length) combination.
+        notes: Optional free-form notes attached to the benchmark run.
+        launch_script: Optional launch script content attached to the benchmark run.
 
     Returns:
         List of created Benchmark row IDs.
@@ -140,6 +144,8 @@ def save_benchmark_run(
                     "partial" if scenario.successful_requests > 0 else "error"
                 )
             ),
+            notes=notes,
+            launch_script=launch_script,
         )
         session.add(benchmark)
         session.flush()

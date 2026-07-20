@@ -75,7 +75,9 @@
                 <th>PP (tok/s)</th>
                 <th>TGS (tok/s)</th>
                 <th>TTFT (ms)</th>
+                <th>Notes</th>
                 <th>Status</th>
+                <th>Notes</th>
                 <th>Started</th>
                 <th>Actions</th>
             </tr>
@@ -97,9 +99,11 @@
                 <td>{{ "%.1f"|format(b.best_pp) if b.best_pp else '-' }}</td>
                 <td>{{ "%.1f"|format(b.best_throughput_tps) if b.best_throughput_tps else '-' }}</td>
                 <td>{{ "%.1f"|format(b.avg_ttft_mean_ms) if b.avg_ttft_mean_ms else '-' }}</td>
+                <td class="notes-cell">{{ b.notes if b.notes else '-' }}</td>
                 <td>
                     <span class="status-badge status-{{ b.status }}">{{ b.status }}</span>
                 </td>
+                <td>{{ b.notes if b.notes else '-' }}</td>
                 <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M') if b.started_at else '-' }}</td>
                 <td>
                     <button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation(); confirmDelete('{{ b.run_id }}', this)" title="Delete benchmark run">🗑</button>
