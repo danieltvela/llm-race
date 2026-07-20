@@ -124,6 +124,19 @@ class PaginatedResult(Generic[T]):
 
 
 @dataclass(frozen=True)
+class ModelSummary:
+    """Summary view of a model with benchmark count."""
+
+    id: int
+    name: str
+    version: str | None
+    quantization: str | None
+    provider_name: str
+    context_window: int | None
+    benchmark_count: int
+
+
+@dataclass(frozen=True)
 class TimeseriesPoint:
     """Single time-series data point."""
 

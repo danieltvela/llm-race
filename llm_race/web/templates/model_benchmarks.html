@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}{{ model.name }} — Benchmarks{% endblock %}
+{% block content %}
+<nav aria-label="Breadcrumb" class="breadcrumb">
+    <a href="/models">← Models</a>
+</nav>
+
+<div class="run-header">
+    <h1>{{ model.name }}</h1>
+    <div class="run-meta">
+        <span>{{ model.provider_name }}</span>
+        {% if model.version %}
+        <span>&middot;</span>
+        <span>{{ model.version }}</span>
+        {% endif %}
+        {% if model.quantization %}
+        <span>&middot;</span>
+        <span>{{ model.quantization }}</span>
+        {% endif %}
+    </div>
+</div>
+
+{% if benchmarks %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Run ID</th>
+                <th>Provider</th>
+                <th>Machine</th>
+                <th>Workload</th>
+                <th>Scenarios</th>
+                <th>PP (tok/s)</th>
+                <th>TGS (tok/s)</th>
+                <th>TTFT (ms)</th>
+                <th>Status</th>
+                <th>Started</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in benchmarks %}
+            <tr class="clickable" onclick="window.location='/run/{{ b.run_id }}'">
+                <td>
+                    <span class="run-id-cell">
+                        <code class="run-id-text">{{ b.run_id[:8] }}...{{ b.run_id[-6:] }}</code>
+                        <button class="copy-btn" onclick="event.stopPropagation(); copyRunId('{{ b.run_id }}', this)" title="Copy run ID">📋</button>
+                    </span>
+                </td>
+                <td>{{ b.provider_name }}</td>
+                <td>{{ b.hostname }}</td>
+                <td>{{ b.workload_profile }}</td>
+                <td>{{ b.scenario_count }}</td>
+                <td>{{ "%.1f"|format(b.best_pp) if b.best_pp else '-' }}</td>
+                <td>{{ "%.1f"|format(b.best_throughput_tps) if b.best_throughput_tps else '-' }}</td>
+                <td>{{ "%.1f"|format(b.avg_ttft_mean_ms) if b.avg_ttft_mean_ms else '-' }}</td>
+                <td>
+                    <span class="status-badge status-{{ b.status }}">{{ b.status }}</span>
+                </td>
+                <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M') if b.started_at else '-' }}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation(); confirmDelete('{{ b.run_id }}', this)" title="Delete benchmark run">🗑</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="pagination">
+    {% if has_prev %}
+    <a href="?page={{ prev_page }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Previous</a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled>Previous</button>
+    {% endif %}
+    <span class="pagination-info">Page {{ page }} of {{ total_pages }}</span>
+    {% if has_next %}
+    <a href="?page={{ next_page }}&limit={{ limit }}" class="btn btn-secondary btn-sm">Next</a>
+    {% else %}
+    <button class="btn btn-secondary btn-sm" disabled>Next</button>
+    {% endif %}
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No benchmarks found</h3>
+    <p>This model has no benchmark data yet.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyRunId(runId, btn) {
+    var original = btn.textContent;
+    function done(ok) {
+        btn.textContent = ok ? '✓' : '✗';
+        if (ok) btn.classList.add('copied');
+        setTimeout(function() {
+            btn.textContent = original;
+            btn.classList.remove('copied');
+        }, 2000);
+    }
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(runId).then(function() { done(true); }).catch(function() { done(fallbackCopy(runId)); });
+    } else {
+        done(fallbackCopy(runId));
+    }
+}
+function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { return document.execCommand('copy'); } catch(e) { return false; }
+    finally { document.body.removeChild(ta); }
+}
+function confirmDelete(runId, btn) {
+    if (!confirm('Are you sure you want to delete this benchmark run?\n\nThis action cannot be undone.')) {
+        return;
+    }
+    btn.disabled = true;
+    btn.textContent = '...';
+    var xhr = new XMLHttpRequest();
+    xhr.open('DELETE', '/run/' + runId, true);
+    xhr.onload = function() {
+        if (xhr.status === 200) {
+            var row = btn.closest('tr');
+            if (row) row.remove();
+        } else {
+            alert('Failed to delete benchmark. Server returned: ' + xhr.status);
+            btn.disabled = false;
+            btn.textContent = '\uD83D\uDDD1';
+        }
+    };
+    xhr.onerror = function() {
+        alert('Network error while deleting benchmark.');
+        btn.disabled = false;
+        btn.textContent = '\uD83D\uDDD1';
+    };
+    xhr.send();
+}
+</script>
+{% endblock %}

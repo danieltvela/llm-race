@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Models — LLM Race{% endblock %}
+{% block content %}
+<h1>Models</h1>
+
+<form method="GET" action="/models" class="filter-form">
+    <div class="filter-group">
+        <label for="search">Search</label>
+        <input type="text" id="search" name="search"
+               value="{{ search }}" placeholder="Search model name...">
+    </div>
+    <div class="filter-group">
+        <label for="provider">Provider</label>
+        <select id="provider" name="provider">
+            <option value="">All</option>
+            {% for p in provider_names %}
+            <option value="{{ p }}" {% if provider == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary">Filter</button>
+        <a href="/models" class="btn btn-secondary">Reset</a>
+    </div>
+</form>
+
+{% if models %}
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Model</th>
+                <th>Provider</th>
+                <th>Version</th>
+                <th>Quantization</th>
+                <th>Context Window</th>
+                <th>Benchmarks</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in models %}
+            <tr class="clickable" onclick="window.location='/model/{{ m.id }}'">
+                <td>{{ m.name }}</td>
+                <td>{{ m.provider_name }}</td>
+                <td>{{ m.version if m.version else '-' }}</td>
+                <td>{{ m.quantization if m.quantization else '-' }}</td>
+                <td>{{ m.context_window if m.context_window else '-' }}</td>
+                <td>{{ m.benchmark_count }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<p class="text-muted">Total: {{ total_count }} model(s)</p>
+{% else %}
+<div class="empty-state">
+    <h3>No models found</h3>
+    <p>Try adjusting your filters or run a benchmark first.</p>
+</div>
+{% endif %}
+{% endblock %}

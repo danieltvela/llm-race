@@ -36,6 +36,8 @@ from llm_race.db.queries import (
     get_run_benchmarks,
     compare_runs,
     timeseries,
+    list_models,
+    get_model_benchmarks,
 )
 
 logger = logging.getLogger(__name__)
@@ -110,6 +112,16 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
                 self.handle_docs()
             elif path == "/export/csv":
                 self.handle_csv_export(params)
+            elif path == "/models":
+                self.handle_models(params)
+            elif path.startswith("/model/"):
+                model_id_str = path.removeprefix("/model/")
+                try:
+                    model_id = int(model_id_str)
+                except ValueError:
+                    self.send_error(400, "Invalid model ID")
+                    return
+                self.handle_model_benchmarks(model_id, params)
             elif path.startswith("/run/"):
                 run_id = path.removeprefix("/run/")
                 self.handle_run_detail(run_id)
@@ -150,6 +162,68 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps({"status": "ok"}).encode("utf-8"))
+
+    def handle_models(self, params: dict[str, list[str]]) -> None:
+        """Render the models list page."""
+        search = params.get("search", [None])[0]
+        provider = params.get("provider", [None])[0]
+
+        with _get_db_session() as session:
+            models = list_models(session, search=search, provider=provider)
+            provider_names = [row[0] for row in session.query(Model.provider_name).distinct().order_by(Model.provider_name).all()]
+
+            html = jinja_env.get_template("models.html").render(
+                models=models,
+                total_count=len(models),
+                search=search or "",
+                provider=provider or "",
+                provider_names=provider_names,
+            )
+
+        self._send_html(html)
+
+    def handle_model_benchmarks(self, model_id: int, params: dict[str, list[str]]) -> None:
+        """Render the benchmarks for a specific model."""
+        page = int(params.get("page", ["1"])[0])
+        limit = int(params.get("limit", ["20"])[0])
+        sort_by = params.get("sort_by", ["started_at"])[0]
+        sort_order = params.get("sort_order", ["desc"])[0]
+
+        with _get_db_session() as session:
+            model = session.query(Model).filter(Model.id == model_id).first()
+            if not model:
+                self._send_html("<h1>Model not found</h1><p>No model found with ID: " + str(model_id) + "</p><a href='/models'>Back to Models</a>", status=404)
+                return
+
+            items, total_count = get_model_benchmarks(
+                session,
+                model_id=model_id,
+                sort_by=sort_by,
+                sort_order=sort_order,
+                offset=(page - 1) * limit,
+                limit=limit,
+            )
+
+            total_pages = max(1, (total_count + limit - 1) // limit)
+            has_prev = page > 1
+            has_next = page < total_pages
+
+            html = jinja_env.get_template("model_benchmarks.html").render(
+                model=model,
+                benchmarks=items,
+                total_count=total_count,
+                page=page,
+                limit=limit,
+                total_pages=total_pages,
+                has_prev=has_prev,
+                has_next=has_next,
+                prev_page=page - 1 if has_prev else 1,
+                next_page=page + 1 if has_next else page,
+                sort_by=sort_by,
+                sort_order=sort_order,
+            )
+
+        self._send_html(html)
 
     def handle_index(self, params: dict[str, list[str]]) -> None:
         model_name = params.get("model_name", [None])[0]

@@ -14,6 +14,7 @@ from llm_race.db.types import (
     BenchmarkFilters,
     BenchmarkGroupSummary,
     BenchmarkSummary,
+    ModelSummary,
     PaginatedResult,
     ResultRow,
     TimeseriesPoint,
@@ -538,3 +539,151 @@ def _benchmark_to_summary(b: Benchmark) -> BenchmarkSummary:
         notes=b.notes,
         launch_script=b.launch_script,
     )
+
+
+def list_models(
+    session: Session,
+    search: str | None = None,
+    provider: str | None = None,
+) -> list[ModelSummary]:
+    """List all models with their benchmark counts.
+
+    Args:
+        session: SQLAlchemy ORM session.
+        search: Optional model name search (LIKE match).
+        provider: Optional provider name filter (exact match).
+
+    Returns:
+        List of ModelSummary ordered by name.
+    """
+    query = (
+        select(
+            Model.id,
+            Model.name,
+            Model.version,
+            Model.quantization,
+            Model.provider_name,
+            Model.context_window,
+            func.count(Benchmark.id).label("benchmark_count"),
+        )
+        .outerjoin(Benchmark, Model.id == Benchmark.model_id)
+        .group_by(
+            Model.id,
+            Model.name,
+            Model.version,
+            Model.quantization,
+            Model.provider_name,
+            Model.context_window,
+        )
+        .order_by(asc(Model.provider_name), asc(Model.name))
+    )
+
+    if search:
+        query = query.having(Model.name.ilike(f"%{search}%"))
+    if provider:
+        query = query.having(Model.provider_name == provider)
+
+    rows = session.execute(query).all()
+
+    return [
+        ModelSummary(
+            id=row.id,
+            name=row.name,
+            version=row.version,
+            quantization=row.quantization,
+            provider_name=row.provider_name,
+            context_window=row.context_window,
+            benchmark_count=row.benchmark_count,
+        )
+        for row in rows
+    ]
+
+
+def get_model_benchmarks(
+    session: Session,
+    model_id: int,
+    sort_by: str = "started_at",
+    sort_order: str = "desc",
+    offset: int = 0,
+    limit: int = 20,
+) -> tuple[list[BenchmarkGroupSummary], int]:
+    """List benchmark groups for a specific model.
+
+    Args:
+        session: SQLAlchemy ORM session.
+        model_id: Model primary key.
+        sort_by: Column name to sort by.
+        sort_order: "asc" or "desc".
+        offset: Number of records to skip.
+        limit: Maximum number of records to return.
+
+    Returns:
+        Tuple of (list of BenchmarkGroupSummary, total count).
+    """
+    if sort_by not in _SORT_WHITELIST:
+        raise ValueError(f"Invalid sort_by: {sort_by}. Allowed: {sorted(_SORT_WHITELIST)}")
+
+    priority = case(
+        (Benchmark.status == "running", 4),
+        (Benchmark.status == "error", 3),
+        (Benchmark.status == "partial", 2),
+        else_=1,
+    )
+    group_status = case(
+        (func.max(priority) == 4, "running"),
+        (func.max(priority) == 3, "error"),
+        (func.max(priority) == 2, "partial"),
+        else_="success",
+    )
+
+    query = (
+        select(
+            Benchmark.run_id,
+            Model.name.label("model_name"),
+            Model.provider_name,
+            Machine.hostname,
+            Benchmark.workload_profile,
+            func.count(Benchmark.id).label("scenario_count"),
+            func.min(Benchmark.started_at).label("started_at"),
+            func.max(Benchmark.completed_at).label("completed_at"),
+            func.max(Benchmark.throughput_tps).label("best_throughput_tps"),
+            func.max(Benchmark.pp_mean).label("best_pp"),
+            func.avg(Benchmark.ttft_mean_ms).label("avg_ttft_mean_ms"),
+            func.avg(Benchmark.e2e_mean_ms).label("avg_e2e_mean_ms"),
+            group_status.label("status"),
+            func.min(Benchmark.notes).label("notes"),
+            func.min(Benchmark.launch_script).label("launch_script"),
+        )
+        .join(Model, Benchmark.model_id == Model.id)
+        .join(Machine, Benchmark.machine_id == Machine.id)
+        .where(Model.id == model_id)
+        .group_by(Benchmark.run_id, Model.name, Model.provider_name, Machine.hostname, Benchmark.workload_profile)
+    )
+
+    # Count
+    count_q = select(func.count()).select_from(query.subquery())
+    total_count = session.execute(count_q).scalar() or 0
+
+    # Sort
+    if sort_by == "started_at":
+        query = query.order_by(
+            desc(func.min(Benchmark.started_at)) if sort_order.lower() == "desc" else asc(func.min(Benchmark.started_at))
+        )
+    elif sort_by == "completed_at":
+        query = query.order_by(
+            desc(func.max(Benchmark.completed_at)) if sort_order.lower() == "desc" else asc(func.max(Benchmark.completed_at))
+        )
+    elif sort_by == "throughput_tps":
+        query = query.order_by(
+            desc(func.max(Benchmark.throughput_tps)) if sort_order.lower() == "desc" else asc(func.max(Benchmark.throughput_tps))
+        )
+    else:
+        col = getattr(Benchmark, sort_by)
+        agg = func.max(col)
+        query = query.order_by(desc(agg) if sort_order.lower() == "desc" else asc(agg))
+
+    query = query.offset(offset).limit(limit)
+    rows = session.execute(query).all()
+
+    items = [_row_to_group_summary(r) for r in rows]
+    return items, total_count
