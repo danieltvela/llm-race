@@ -405,6 +405,23 @@ def _handle_swebench_run(
             session.add(machine_record)
             session.flush()
 
+        # Abandon any previous "running" swebench runs for this model
+        abandoned = (
+            session.query(Benchmark)
+            .filter(
+                Benchmark.model_id == model_record.id,
+                Benchmark.benchmark_type == "swebench",
+                Benchmark.status == "running",
+            )
+            .all()
+        )
+        if abandoned:
+            for b in abandoned:
+                b.status = "abandoned"
+                b.notes = (b.notes + " | abandoned: new run started").strip(" |")
+            session.flush()
+            print(f"Marked {len(abandoned)} previous pending SWE-bench run(s) as abandoned.")
+
         # Create pending Benchmark row
         benchmark = Benchmark(
             run_id=run_id,

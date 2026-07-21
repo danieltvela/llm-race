@@ -33,9 +33,9 @@ uv run python -m llm_race run --benchmark-type swebench \
   --provider vllm \
   --base-url http://192.168.1.47:8005/v1 \
   --swebench-split test \
-  --swebench-workers 4 \
+  --swebench-workers 2 \
   --swebench-subset multilingual \
-  --swebench-instances 0:10   
+  --swebench-instances 0:9
 
 # Use "--swebench-subset multilingual" because it uses different languages like Rust, js, etc.
 
