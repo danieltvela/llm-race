@@ -215,6 +215,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             html = jinja_env.get_template("model_benchmarks.html").render(
                 model=model,
                 benchmarks=items,
+                has_swebench=any(b.benchmark_type == "swebench" for b in items),
                 total_count=total_count,
                 page=page,
                 limit=limit,
@@ -423,6 +424,7 @@ class BenchmarkHTTPHandler(http.server.BaseHTTPRequestHandler):
             provider_name=first.provider_name,
             hostname=first.hostname,
             workload_profile=first.workload_profile,
+            benchmark_type=first.benchmark_type,
             benchmarks=benchmarks,
         )
         self._send_html(html)

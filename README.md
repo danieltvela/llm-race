@@ -10,6 +10,58 @@ Benchmark and speed-test tracker for LLM models across different providers, mach
 - **Workloads**: prompt size, expected output length, concurrency level (single user → many agents → massive concurrency)
 - **Metrics**: tokens/sec (input & output), TTFT (time to first token), total latency, p50/p90/p99 latency, error rate, cost per token
 
+## Benchmark types
+
+LLM Race supports multiple benchmark types:
+
+### Speed benchmarks (default)
+
+Measure inference speed across different concurrency levels and prompt sizes.
+
+```bash
+uv run python -m llm_race run --slug "Qwen/Qwen3.6-27B-FP8/FP8" --provider vllm --base-url http://192.168.1.47:8005/v1 --workload multi-agent
+```
+
+### SWE-bench (mini-SWE-agent)
+
+Evaluate model coding ability using [mini-SWE-agent](https://github.com/swe-agent/mini-swe-agent) on the [SWE-bench](https://www.swebench.com/) dataset. Measures how many GitHub issues a model can resolve autonomously.
+
+```bash
+# Generate a self-contained launch script
+uv run python -m llm_race run --benchmark-type swebench \
+  --slug "openai/gpt-4o/none" \
+  --swebench-subset lite \
+  --swebench-split dev \
+  --swebench-instances 0:5 \
+  --swebench-workers 1
+
+# Execute the generated script (installs mini-swe-agent if needed, runs benchmark, imports results)
+bash launch_swebench_*.sh
+```
+
+**SWE-bench options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--swebench-subset` | `lite` | Dataset: `lite`, `verified`, `full`, or custom path |
+| `--swebench-split` | `dev` | Split: `dev`, `test` |
+| `--swebench-instances` | all | Slice spec, e.g. `0:5` for first 5 instances |
+| `--swebench-workers` | `1` | Parallel workers |
+| `--swebench-environment` | `docker` | Environment: `docker`, `singularity`, `local` |
+
+The model name for mini-SWE-agent is derived from the slug: `{ai_lab}/{name}` (e.g. `openai/gpt-4o`).
+To use a custom API endpoint, pass `--base-url` and it will be forwarded to mini-SWE-agent.
+
+**SWE-bench metrics:**
+
+- **Resolve rate %**: percentage of instances resolved
+- **Resolved / Total**: number of resolved vs total instances
+- **Avg cost ($)**: average cost per instance (from trajectory data)
+- **Avg steps**: average agent steps per instance
+- **Avg wall time (s)**: average wall clock time per instance
+
+Results are stored in the database and visible in the web viewer alongside speed benchmarks.
+
 ## Quick start
 
 ```bash
@@ -34,8 +86,10 @@ llm_race/
 ├── __init__.py
 ├── __main__.py              # Entry: python -m llm_race
 ├── bench/                   # Benchmark runner (CLI)
-│   ├── cli.py               # argparse commands (run)
-│   ├── runner.py            # orchestrates a benchmark run
+│   ├── cli.py               # argparse commands (run, import)
+│   ├── runner.py            # orchestrates speed benchmark runs
+│   ├── swebench_runner.py   # SWE-bench launch script generator
+│   ├── swebench_importer.py # SWE-bench results importer
 │   ├── workloads.py         # workload profiles (single-user, multi-agent, …)
 │   └── prompts.py           # prompt generation by token length
 ├── config/                  # Provider implementations & configuration
@@ -94,8 +148,10 @@ Custom prompt templates can be added in `llm_race/bench/prompts.py`.
 SQLite database at `llm_race/data/benchmarks.db`. Schema includes:
 - `models`: model name, version, quantization, provider
 - `machines`: hardware specs, OS, GPU info
-- `benchmarks`: test runs with workload profile, prompt size, concurrency
+- `benchmarks`: test runs with workload profile, prompt size, concurrency, benchmark type (`speed` or `swebench`), and type-specific metrics
 - `results`: per-run metrics (tokens/sec, latency percentiles, errors)
+
+The `benchmarks` table tracks both speed benchmarks (tokens/sec, TTFT, latency) and SWE-bench results (resolve rate, instances, cost, steps).
 
 ## Web viewer
 

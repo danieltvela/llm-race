@@ -29,6 +29,7 @@ _SORT_WHITELIST = {
     "wall_clock_seconds", "total_requests", "successful_requests",
     "failed_requests", "concurrency", "status",
     "pp_mean", "pp_p50", "pp_p90", "pp_p99",
+    "benchmark_type",
 }
 
 
@@ -86,6 +87,8 @@ def list_benchmarks(
             query = query.where(Benchmark.status == filters.status)
         if filters.workload_profile:
             query = query.where(Benchmark.workload_profile == filters.workload_profile)
+        if filters.benchmark_type:
+            query = query.where(Benchmark.benchmark_type == filters.benchmark_type)
         if filters.prompt_size:
             query = query.where(Benchmark.prompt_size == filters.prompt_size)
 
@@ -163,6 +166,7 @@ def _benchmark_to_detail(b: Benchmark) -> BenchmarkDetail:
         provider_name=b.model.provider_name if b.model else "",
         hostname=b.machine.hostname if b.machine else "",
         workload_profile=b.workload_profile,
+        benchmark_type=b.benchmark_type,
         prompt_size=b.prompt_size,
         concurrency=b.concurrency,
         started_at=b.started_at,
@@ -415,6 +419,7 @@ def list_benchmark_groups(
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
+            func.min(Benchmark.benchmark_type).label("benchmark_type"),
             func.count(Benchmark.id).label("scenario_count"),
             func.min(Benchmark.started_at).label("started_at"),
             func.max(Benchmark.completed_at).label("completed_at"),
@@ -422,6 +427,10 @@ def list_benchmark_groups(
             func.max(Benchmark.pp_mean).label("best_pp"),
             func.avg(Benchmark.ttft_mean_ms).label("avg_ttft_mean_ms"),
             func.avg(Benchmark.e2e_mean_ms).label("avg_e2e_mean_ms"),
+            func.max(Benchmark.resolve_rate).label("resolve_rate"),
+            func.max(Benchmark.total_instances).label("total_instances"),
+            func.min(Benchmark.swebench_subset).label("swebench_subset"),
+            func.min(Benchmark.swebench_split).label("swebench_split"),
             group_status.label("status"),
             func.min(Benchmark.notes).label("notes"),
             func.min(Benchmark.launch_script).label("launch_script"),
@@ -436,6 +445,7 @@ def list_benchmark_groups(
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
+            Benchmark.benchmark_type,
         )
     )
 
@@ -456,6 +466,8 @@ def list_benchmark_groups(
             query = query.where(Benchmark.started_at <= filters.date_end)
         if filters.workload_profile:
             query = query.where(Benchmark.workload_profile == filters.workload_profile)
+        if filters.benchmark_type:
+            query = query.where(Benchmark.benchmark_type == filters.benchmark_type)
         if filters.prompt_size:
             query = query.having(
                 func.sum(case((Benchmark.prompt_size == filters.prompt_size, 1), else_=0)) > 0
@@ -506,6 +518,7 @@ def _row_to_group_summary(r) -> BenchmarkGroupSummary:
         provider_name=r.provider_name,
         hostname=r.hostname,
         workload_profile=r.workload_profile or "",
+        benchmark_type=r.benchmark_type or "speed",
         scenario_count=r.scenario_count,
         started_at=_ensure_aware(r.started_at),
         completed_at=_ensure_aware(r.completed_at),
@@ -517,6 +530,12 @@ def _row_to_group_summary(r) -> BenchmarkGroupSummary:
         avg_e2e_mean_ms=(
             round(float(r.avg_e2e_mean_ms), 2) if r.avg_e2e_mean_ms is not None else None
         ),
+        resolve_rate=(
+            round(float(r.resolve_rate), 2) if r.resolve_rate is not None else None
+        ),
+        total_instances=r.total_instances,
+        swebench_subset=r.swebench_subset,
+        swebench_split=r.swebench_split,
         status=r.status,
         notes=r.notes or "",
         launch_script=r.launch_script or "",
@@ -551,6 +570,7 @@ def _benchmark_to_summary(b: Benchmark) -> BenchmarkSummary:
         provider_name=b.model.provider_name if b.model else "",
         hostname=b.machine.hostname if b.machine else "",
         workload_profile=b.workload_profile,
+        benchmark_type=b.benchmark_type,
         prompt_size=b.prompt_size,
         concurrency=b.concurrency,
         started_at=b.started_at,
@@ -687,6 +707,7 @@ def get_model_benchmarks(
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
+            func.min(Benchmark.benchmark_type).label("benchmark_type"),
             func.count(Benchmark.id).label("scenario_count"),
             func.min(Benchmark.started_at).label("started_at"),
             func.max(Benchmark.completed_at).label("completed_at"),
@@ -694,6 +715,10 @@ def get_model_benchmarks(
             func.max(Benchmark.pp_mean).label("best_pp"),
             func.avg(Benchmark.ttft_mean_ms).label("avg_ttft_mean_ms"),
             func.avg(Benchmark.e2e_mean_ms).label("avg_e2e_mean_ms"),
+            func.max(Benchmark.resolve_rate).label("resolve_rate"),
+            func.max(Benchmark.total_instances).label("total_instances"),
+            func.min(Benchmark.swebench_subset).label("swebench_subset"),
+            func.min(Benchmark.swebench_split).label("swebench_split"),
             group_status.label("status"),
             func.min(Benchmark.notes).label("notes"),
             func.min(Benchmark.launch_script).label("launch_script"),
@@ -709,6 +734,7 @@ def get_model_benchmarks(
             Model.provider_name,
             Machine.hostname,
             Benchmark.workload_profile,
+            Benchmark.benchmark_type,
         )
     )
 

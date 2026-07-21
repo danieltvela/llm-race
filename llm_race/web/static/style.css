@@ -582,3 +582,54 @@ a:hover {
   background: rgba(239, 83, 80, 0.15);
   color: var(--danger);
 }
+
+/* ── Type badges ──────────────────────────────────────── */
+.type-badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.type-speed {
+  background: rgba(79, 195, 247, 0.15);
+  color: var(--accent);
+}
+
+.type-swebench {
+  background: rgba(255, 167, 38, 0.15);
+  color: var(--warning);
+}
+
+/* ── SWE-bench summary cards ──────────────────────────── */
+.swebench-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

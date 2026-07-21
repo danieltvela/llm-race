@@ -24,6 +24,8 @@
     </div>
 </div>
 
+{% set has_swebench = benchmarks | selectattr('benchmark_type', 'equalto', 'swebench') | list | length > 0 %}
+
 {% if benchmarks %}
 <div class="table-container">
     <table class="table">
@@ -33,10 +35,16 @@
                 <th>Provider</th>
                 <th>Machine</th>
                 <th>Workload</th>
+                <th>Type</th>
                 <th>Scenarios</th>
                 <th>PP (tok/s)</th>
                 <th>TGS (tok/s)</th>
                 <th>TTFT (ms)</th>
+                {% if has_swebench %}
+                <th>Resolve %</th>
+                <th>Instances</th>
+                <th>Subset</th>
+                {% endif %}
                 <th>Status</th>
                 <th>Started</th>
                 <th>Actions</th>
@@ -54,10 +62,16 @@
                 <td>{{ b.provider_name }}</td>
                 <td>{{ b.hostname }}</td>
                 <td>{{ b.workload_profile }}</td>
+                <td><span class="type-badge type-{{ b.benchmark_type }}">{{ b.benchmark_type }}</span></td>
                 <td>{{ b.scenario_count }}</td>
                 <td>{{ "%.1f"|format(b.best_pp) if b.best_pp else '-' }}</td>
                 <td>{{ "%.1f"|format(b.best_throughput_tps) if b.best_throughput_tps else '-' }}</td>
                 <td>{{ "%.1f"|format(b.avg_ttft_mean_ms) if b.avg_ttft_mean_ms else '-' }}</td>
+                {% if has_swebench %}
+                <td>{{ "%.1f"|format(b.resolve_rate) if b.resolve_rate else '-' }}</td>
+                <td>{{ b.total_instances if b.total_instances else '-' }}</td>
+                <td>{{ b.swebench_subset if b.swebench_subset else '-' }}</td>
+                {% endif %}
                 <td>
                     <span class="status-badge status-{{ b.status }}">{{ b.status }}</span>
                 </td>

@@ -17,6 +17,8 @@
         <span>{{ hostname }}</span>
         <span>&middot;</span>
         <span>{{ workload_profile }}</span>
+        <span>&middot;</span>
+        <span class="type-badge type-{{ benchmark_type }}">{{ benchmark_type }}</span>
     </div>
     <div class="run-id-block">
         <code class="run-id-full">{{ run_id }}</code>
@@ -38,6 +40,90 @@
 </div>
 {% endif %}
 
+{% if benchmark_type == 'swebench' %}
+<!-- SWE-bench detail view -->
+{% if benchmarks %}
+{% set b = benchmarks[0] %}
+<div class="swebench-summary">
+    <div class="metric-card">
+        <div class="metric-value">{{ "%.1f"|format(b.resolve_rate) if b.resolve_rate else '-' }}%</div>
+        <div class="metric-label">Resolve Rate</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ b.resolved_count if b.resolved_count else '-' }}</div>
+        <div class="metric-label">Resolved</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ b.total_instances if b.total_instances else '-' }}</div>
+        <div class="metric-label">Total Instances</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ b.swebench_subset if b.swebench_subset else '-' }}</div>
+        <div class="metric-label">Subset</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ b.swebench_split if b.swebench_split else '-' }}</div>
+        <div class="metric-label">Split</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ "%.2f"|format(b.avg_cost_usd) if b.avg_cost_usd else '-' }}</div>
+        <div class="metric-label">Avg Cost ($)</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ "%.1f"|format(b.avg_steps) if b.avg_steps else '-' }}</div>
+        <div class="metric-label">Avg Steps</div>
+    </div>
+    <div class="metric-card">
+        <div class="metric-value">{{ "%.0f"|format(b.avg_wall_time_s) if b.avg_wall_time_s else '-' }}</div>
+        <div class="metric-label">Avg Wall Time (s)</div>
+    </div>
+</div>
+
+<div class="table-container">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Status</th>
+                <th>Resolved</th>
+                <th>Total</th>
+                <th>Resolve %</th>
+                <th>Avg Cost ($)</th>
+                <th>Avg Steps</th>
+                <th>Avg Wall Time (s)</th>
+                <th>Started</th>
+                <th>Completed</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for b in benchmarks %}
+            <tr>
+                <td><span class="status-badge status-{{ b.status }}">{{ b.status }}</span></td>
+                <td>{{ b.resolved_count if b.resolved_count else '-' }}</td>
+                <td>{{ b.total_instances if b.total_instances else '-' }}</td>
+                <td>{{ "%.1f"|format(b.resolve_rate) if b.resolve_rate else '-' }}%</td>
+                <td>{{ "%.2f"|format(b.avg_cost_usd) if b.avg_cost_usd else '-' }}</td>
+                <td>{{ "%.1f"|format(b.avg_steps) if b.avg_steps else '-' }}</td>
+                <td>{{ "%.0f"|format(b.avg_wall_time_s) if b.avg_wall_time_s else '-' }}</td>
+                <td>{{ b.started_at.strftime('%Y-%m-%d %H:%M') if b.started_at else '-' }}</td>
+                <td>{{ b.completed_at.strftime('%Y-%m-%d %H:%M') if b.completed_at else '-' }}</td>
+                <td>
+                    <button class="btn btn-sm btn-danger delete-btn" onclick="confirmDelete('{{ b.run_id }}', this)" title="Delete this run">🗑</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <h3>No SWE-bench results found</h3>
+    <p>This run has no SWE-bench benchmark data.</p>
+</div>
+{% endif %}
+
+{% else %}
+<!-- Speed benchmark detail view (existing) -->
 {% if benchmarks %}
 <div class="table-container">
     <table class="table">
@@ -92,6 +178,7 @@
     <h3>No scenarios found</h3>
     <p>This run has no benchmark data.</p>
 </div>
+{% endif %}
 {% endif %}
 {% endblock %}
 

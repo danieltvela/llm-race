@@ -5,11 +5,15 @@ import asyncio
 import logging
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
+
+from sqlalchemy import select
 
 from llm_race.bench.runner import run_benchmarks
 from llm_race.bench.workloads import WORKLOAD_REGISTRY, get_workload
 from llm_race.config import (
+    DB_PATH,
     DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
     DEFAULT_MAX_TOKENS,
@@ -23,6 +27,7 @@ from llm_race.config import (
     DEFAULT_WARMUP_ITERATIONS,
     create_provider,
 )
+from llm_race.db.models import Benchmark, Machine, Model, init_db
 from llm_race.utils.slug import build_slug, parse_slug, validate_slug
 from llm_race.utils.system import collect_system_info
 
@@ -38,6 +43,12 @@ def main() -> None:
         help="Provider type (vllm, openai, anthropic, ollama, …) [default: %(default)s]",
     )
     run_parser.add_argument("--base-url", default=DEFAULT_BASE_URL)
+    run_parser.add_argument(
+        "--benchmark-type",
+        choices=["speed", "swebench"],
+        default="speed",
+        help="Benchmark type to run [default: %(default)s]",
+    )
 
     # Model identification: --slug or individual flags
     model_group = run_parser.add_mutually_exclusive_group()
@@ -127,7 +138,54 @@ def main() -> None:
         help="Path to a launch script file to store with the benchmark",
     )
 
+    # SWE-bench specific options
+    swebench_group = run_parser.add_argument_group("SWE-bench options")
+    swebench_group.add_argument(
+        "--swebench-subset",
+        default="lite",
+        help="SWE-bench subset (lite, verified, full) or dataset path [default: lite]",
+    )
+    swebench_group.add_argument(
+        "--swebench-split",
+        default="dev",
+        help="Dataset split [default: dev]",
+    )
+    swebench_group.add_argument(
+        "--swebench-workers",
+        type=int,
+        default=1,
+        help="Number of parallel workers [default: 1]",
+    )
+    swebench_group.add_argument(
+        "--swebench-instances",
+        default=None,
+        help="Slice specification (e.g. '0:5' for first 5 instances) or 'all'",
+    )
+    swebench_group.add_argument(
+        "--swebench-environment",
+        default="docker",
+        choices=["docker", "singularity", "local"],
+        help="Environment type [default: docker]",
+    )
+
+    # Import subcommand
+    import_parser = subparsers.add_parser("import", help="Import benchmark results into the database")
+    import_parser.add_argument("--run-id", required=True, help="UUID of the benchmark run to update")
+    import_parser.add_argument("--output-dir", required=True, help="Directory containing mini-swe-agent output (preds.json)")
+    import_parser.add_argument("--db", default=str(DB_PATH), help="Path to the database file")
+
     args = parser.parse_args()
+
+    # Handle import subcommand
+    if args.command == "import":
+        from llm_race.bench.swebench_importer import import_swebench_results
+        success = import_swebench_results(args.run_id, args.output_dir, args.db)
+        if success:
+            print(f"Results imported successfully for run {args.run_id}")
+        else:
+            print(f"Failed to import results for run {args.run_id}", file=sys.stderr)
+            sys.exit(1)
+        return
 
     # Handle --list-presets: print and exit immediately.
     if args.list_presets:
@@ -195,6 +253,12 @@ def main() -> None:
 
     assert model_api_name is not None, "Model API name must be resolved"
 
+    # ── SWE-bench benchmark type ──────────────────────────────────────
+    if args.benchmark_type == "swebench":
+        _handle_swebench_run(args, model_slug, logger)
+        return
+
+    # ── Speed benchmark (default) ─────────────────────────────────────
     # Resolve concurrency and prompt_lengths from workload profile if set.
     if args.workload:
         profile = get_workload(args.workload)
@@ -253,6 +317,107 @@ def main() -> None:
             launch_script=launch_script_content,
         )
     )
+
+
+def _handle_swebench_run(
+    args: argparse.Namespace,
+    model_slug: str,
+    logger: logging.Logger,
+) -> None:
+    """Generate a launch script and save a pending SWE-bench benchmark row."""
+    from llm_race.bench.swebench_runner import generate_swebench_launch_script
+
+    run_id = str(uuid.uuid4())
+    parsed = parse_slug(model_slug)
+    swebench_model_name = f"{parsed['ai_lab']}/{parsed['name']}"
+
+    # Determine base_url to pass to launch script
+    base_url = args.base_url if args.base_url != DEFAULT_BASE_URL else None
+
+    # Generate launch script
+    launch_script_content = generate_swebench_launch_script(
+        model_slug=model_slug,
+        base_url=base_url,
+        subset=args.swebench_subset,
+        split=args.swebench_split,
+        workers=args.swebench_workers,
+        instances=args.swebench_instances,
+        environment=args.swebench_environment,
+        run_id=run_id,
+        db_path=str(DB_PATH),
+    )
+
+    # Save the launch script to a file for user convenience
+    script_path = Path(f"launch_swebench_{run_id[:8]}.sh")
+    script_path.write_text(launch_script_content)
+    script_path.chmod(0o755)
+    print(f"Launch script written to: {script_path}")
+
+    # Save pending benchmark row to DB
+    if args.no_db:
+        print(f"Skipping DB save (--no-db). Run the launch script manually:")
+        print(f"  bash {script_path}")
+        return
+
+    system_info = collect_system_info().to_dict()
+
+    engine, session_factory = init_db()
+    with session_factory() as session:
+        # Find or create Model
+        model_record = session.execute(
+            select(Model).where(Model.slug == model_slug)
+        ).scalar_one_or_none()
+        if model_record is None:
+            model_record = Model(
+                slug=model_slug,
+                ai_lab=parsed["ai_lab"],
+                name=parsed["name"],
+                quantization=parsed["quantization"],
+                extra=parsed.get("extra"),
+                provider_name=args.provider or "litellm",
+            )
+            session.add(model_record)
+            session.flush()
+
+        # Find or create Machine
+        machine_record = session.execute(
+            select(Machine).where(Machine.hostname == system_info["hostname"])
+        ).scalar_one_or_none()
+        if machine_record is None:
+            machine_kwargs = {k: system_info.get(k) for k in (
+                "hostname", "cpu", "gpu", "gpu_count", "ram_gb",
+                "os", "os_version", "driver_version", "python_version",
+            )}
+            machine_record = Machine(**machine_kwargs)
+            session.add(machine_record)
+            session.flush()
+
+        # Create pending Benchmark row
+        benchmark = Benchmark(
+            run_id=run_id,
+            model_id=model_record.id,
+            machine_id=machine_record.id,
+            benchmark_type="swebench",
+            workload_profile="swebench",
+            prompt_size="n/a",
+            concurrency=1,
+            max_tokens=0,
+            temperature=0.0,
+            top_p=1.0,
+            started_at=datetime.utcnow(),
+            status="running",
+            notes=args.notes,
+            launch_script=launch_script_content,
+            swebench_subset=args.swebench_subset,
+            swebench_split=args.swebench_split,
+            swebench_model_name=swebench_model_name,
+        )
+        session.add(benchmark)
+        session.commit()
+
+    print(f"Pending SWE-bench run saved to DB with run_id: {run_id}")
+    print(f"Execute the launch script to run the benchmark:")
+    print(f"  bash {script_path}")
 
 
 if __name__ == "__main__":

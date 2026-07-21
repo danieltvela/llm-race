@@ -20,6 +20,7 @@ class BenchmarkGroupSummary:
     provider_name: str
     hostname: str
     workload_profile: str
+    benchmark_type: str
     scenario_count: int
     started_at: datetime
     completed_at: datetime | None
@@ -27,6 +28,10 @@ class BenchmarkGroupSummary:
     best_pp: float | None
     avg_ttft_mean_ms: float | None
     avg_e2e_mean_ms: float | None
+    resolve_rate: float | None
+    total_instances: int | None
+    swebench_subset: str | None
+    swebench_split: str | None
     status: str
     notes: str
     launch_script: str
@@ -45,6 +50,7 @@ class BenchmarkFilters:
     date_end: datetime | None = None
     status: str | None = None
     workload_profile: str | None = None
+    benchmark_type: str | None = None
     prompt_size: str | None = None
 
 
@@ -60,6 +66,7 @@ class BenchmarkSummary:
     provider_name: str
     hostname: str
     workload_profile: str
+    benchmark_type: str
     prompt_size: str
     concurrency: int
     started_at: datetime
