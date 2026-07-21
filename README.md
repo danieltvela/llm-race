@@ -35,9 +35,10 @@ uv run python -m llm_race run --benchmark-type swebench \
   --swebench-split test \
   --swebench-workers 2 \
   --swebench-subset multilingual \
-  --swebench-instances 0:9
+  --swebench-instances all
 
 # Use "--swebench-subset multilingual" because it uses different languages like Rust, js, etc.
+# Use --swebench-instances 0:9 for a subset of tests
 
 # Execute the generated script (installs mini-swe-agent if needed, runs benchmark, imports results)
 bash launch_swebench_*.sh

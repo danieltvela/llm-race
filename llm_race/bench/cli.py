@@ -172,6 +172,16 @@ def main() -> None:
         action="store_true",
         help="Re-run existing instances instead of skipping them",
     )
+    swebench_group.add_argument(
+        "--swebench-filter",
+        default=None,
+        help="Filter instance IDs by regex (e.g. 'rust|cargo|tokio')",
+    )
+    swebench_group.add_argument(
+        "--swebench-shuffle",
+        action="store_true",
+        help="Shuffle instance order before slicing",
+    )
 
     # Import subcommand
     import_parser = subparsers.add_parser("import", help="Import benchmark results into the database")
@@ -358,6 +368,8 @@ def _handle_swebench_run(
         run_id=run_id,
         db_path=str(DB_PATH),
         redo=args.swebench_redo,
+        filter_regex=args.swebench_filter,
+        shuffle=args.swebench_shuffle,
     )
 
     # Save the launch script to a file for user convenience

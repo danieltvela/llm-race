@@ -16,6 +16,8 @@ def generate_swebench_launch_script(
     run_id: str,
     db_path: str,
     redo: bool = False,
+    filter_regex: str | None = None,
+    shuffle: bool = False,
 ) -> str:
     """Generate a self-contained bash script that runs mini-SWE-agent SWE-bench.
 
@@ -59,6 +61,12 @@ def generate_swebench_launch_script(
 
     if instances is not None and instances != "all":
         cmd_parts.append(f"--slice {instances}")
+
+    if filter_regex is not None:
+        cmd_parts.append(f"--filter \"{filter_regex}\"")
+
+    if shuffle:
+        cmd_parts.append("--shuffle")
 
     if redo:
         cmd_parts.append("--redo-existing")
