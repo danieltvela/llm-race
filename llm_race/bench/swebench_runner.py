@@ -186,6 +186,14 @@ if ! python3 -c "import minisweagent" 2>/dev/null; then
     echo "mini-swe-agent installed."
 fi
 
+# ── Local model cost tracking ─────────────────────────────────
+# litellm can't calculate costs for custom/local models (not in its price registry).
+# Ignore cost tracking errors so the benchmark doesn't abort.
+if [ -n "{base_url or ''}" ]; then
+    export MSWEA_COST_TRACKING=ignore_errors
+    echo "Local endpoint detected — cost tracking disabled."
+fi
+
 # ── Create output directory ───────────────────────────────────
 mkdir -p {output_dir}
 
