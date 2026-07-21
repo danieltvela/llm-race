@@ -66,6 +66,8 @@ def generate_swebench_launch_script(
         cmd_parts.append("--config swebench.yaml")
         cmd_parts.append(f"--config model.model_kwargs.api_base={base_url}")
         cmd_parts.append("--config model.model_kwargs.api_key=not-needed")
+        cmd_parts.append("--config model.model_kwargs.timeout=600")
+        cmd_parts.append("--config environment.timeout=300")
 
     cmd = " \\\n    ".join(cmd_parts)
 

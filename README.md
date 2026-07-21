@@ -32,10 +32,12 @@ uv run python -m llm_race run --benchmark-type swebench \
   --slug "Qwen/Qwen3.6-27B-FP8/FP8" \
   --provider vllm \
   --base-url http://192.168.1.47:8005/v1 \
-  --swebench-subset lite \
-  --swebench-split dev \
-  --swebench-instances 0:5 \
-  --swebench-workers 1
+  --swebench-split test \
+  --swebench-workers 4 \
+  --swebench-subset multilingual \
+  --swebench-instances 0:10   
+
+# Use "--swebench-subset multilingual" because it uses different languages like Rust, js, etc.
 
 # Execute the generated script (installs mini-swe-agent if needed, runs benchmark, imports results)
 bash launch_swebench_*.sh
