@@ -199,6 +199,16 @@ def _benchmark_to_detail(b: Benchmark) -> BenchmarkDetail:
         itl_p99_ms=b.itl_p99_ms,
         cost_per_token=b.cost_per_token,
         error_message=b.error_message,
+        # SWE-bench fields
+        resolved_count=b.resolved_count,
+        total_instances=b.total_instances,
+        resolve_rate=b.resolve_rate,
+        avg_cost_usd=b.avg_cost_usd,
+        avg_steps=b.avg_steps,
+        avg_wall_time_s=b.avg_wall_time_s,
+        swebench_subset=b.swebench_subset,
+        swebench_split=b.swebench_split,
+        swebench_model_name=b.swebench_model_name,
         results=[_result_to_row(r) for r in (b.results or [])],
     )
 

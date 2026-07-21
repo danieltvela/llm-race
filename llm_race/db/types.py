@@ -123,6 +123,16 @@ class BenchmarkDetail(BenchmarkSummary):
     itl_p99_ms: float | None
     cost_per_token: float | None
     error_message: str | None
+    # SWE-bench fields
+    resolved_count: int | None = None
+    total_instances: int | None = None
+    resolve_rate: float | None = None
+    avg_cost_usd: float | None = None
+    avg_steps: float | None = None
+    avg_wall_time_s: float | None = None
+    swebench_subset: str | None = None
+    swebench_split: str | None = None
+    swebench_model_name: str | None = None
     results: list[ResultRow] = field(default_factory=list)
 
 
