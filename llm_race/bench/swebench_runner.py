@@ -110,50 +110,53 @@ if [ "{environment}" = "docker" ]; then
         exit 1
     fi
 
-    # ── Colima on Apple Silicon ─────────────────────────────────
-    # SWE-bench Docker images are x86_64-only.
-    # Colima must be running an x86_64 VM or ARM64+Rosetta VM.
-    if command -v colima &>/dev/null; then
-        echo ""
-        echo "Colima detected."
+    # ── x86_64 compatibility on ARM64 ──────────────────────────
+    # SWE-bench Docker images are x86_64 only.
+    # On Apple Silicon we need either an amd64 Docker server or Rosetta emulation.
+    DOCKER_ARCH=$(docker version --format '{{{{.Server.Arch}}}}' 2>/dev/null || echo "unknown")
 
-        # Check current Colima architecture
-        COLIMA_ARCH=$(colima status 2>/dev/null | grep -o 'arch: [^ ]*' | cut -d' ' -f2 || echo "")
+    echo ""
+    echo "Docker server architecture: $DOCKER_ARCH"
 
-        if [ "$COLIMA_ARCH" = "aarch64" ] || [ -z "$COLIMA_ARCH" ]; then
-            # Check if Rosetta is available (macOS 13+ with VZ)
-            if [ "$(uname -m)" = "arm64" ] && [ -e "/Library/Apple/usr/libexec/oah/libRosettaRuntime" ]; then
+    case "$DOCKER_ARCH" in
+        amd64|x86_64)
+            # Native x86_64 Docker — no emulation needed.
+            ;;
+        arm64|aarch64)
+            # ARM64 Docker — check if x86_64 emulation is available.
+            if [ -e "/Library/Apple/usr/libexec/oah/libRosettaRuntime" ]; then
+                echo "Rosetta 2 detected — x86_64 containers should work via emulation."
+            else
                 echo ""
-                echo "WARNING: Colima is running in ARM64 mode, but SWE-bench images are x86_64 only."
+                echo "ERROR: Docker runs in ARM64 mode but x86_64 emulation is not available."
                 echo ""
-                echo "Your Colima VM needs x86_64 support. Choose one:"
+                echo "SWE-bench images are x86_64 only. To fix this:"
                 echo ""
-                echo "  Option A (recommended, fast): x86_64 VM"
-                echo "    colima stop"
-                echo "    colima start --arch x86_64"
+                if command -v colima &>/dev/null; then
+                    echo "  Colima detected. Recreate the VM for x86_64:"
+                    echo "    colima stop"
+                    echo "    colima start --arch x86_64"
+                    echo ""
+                    echo "  Or use Rosetta (macOS 13+):"
+                    echo "    colima stop"
+                    echo "    colima start --arch aarch64 --vm-type vz --vz-rosetta"
+                else
+                    echo "  Enable 'Use Rosetta for x86_64/amd64 emulation' in Docker Desktop settings."
+                fi
                 echo ""
-                echo "  Option B (ARM64 + Rosetta):"
-                echo "    colima stop"
-                echo "    colima start --arch aarch64 --vm-type vz --vz-rosetta"
-                echo ""
-                echo "Or use the local environment (no Docker):"
-                echo "  python3 -m llm_race run --benchmark-type swebench --swebench-environment local ..."
+                echo "  Or skip Docker entirely:"
+                echo "    python3 -m llm_race run --benchmark-type swebench --swebench-environment local ..."
                 exit 1
             fi
-        fi
-    fi
-
-    # Apple Silicon (ARM64) macOS: set platform emulation for x86_64 images.
-    # Docker Desktop handles this with Rosetta; Colima with --arch x86_64.
-    UNAME_M=$(uname -m 2>/dev/null || echo "")
-    case "$UNAME_M" in
-        arm64|aarch64)
-            echo ""
-            echo "Detected ARM64 architecture (Apple Silicon)."
-            echo "Setting DOCKER_DEFAULT_PLATFORM=linux/amd64 for x86_64 SWE-bench containers."
-            export DOCKER_DEFAULT_PLATFORM=linux/amd64
+            ;;
+        *)
+            echo "Unknown Docker architecture ($DOCKER_ARCH). Proceeding anyway..."
             ;;
     esac
+
+    # Set platform to ensure amd64 images are pulled/run.
+    export DOCKER_DEFAULT_PLATFORM=linux/amd64
+    echo "Set DOCKER_DEFAULT_PLATFORM=linux/amd64"
 
     echo ""
     echo "Docker is ready."
