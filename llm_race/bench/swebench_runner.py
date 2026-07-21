@@ -15,6 +15,7 @@ def generate_swebench_launch_script(
     environment: str,
     run_id: str,
     db_path: str,
+    redo: bool = False,
 ) -> str:
     """Generate a self-contained bash script that runs mini-SWE-agent SWE-bench.
 
@@ -58,6 +59,9 @@ def generate_swebench_launch_script(
 
     if instances is not None and instances != "all":
         cmd_parts.append(f"--slice {instances}")
+
+    if redo:
+        cmd_parts.append("--redo-existing")
 
     if environment != "docker":
         cmd_parts.append(f"--environment-class {environment}")

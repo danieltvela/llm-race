@@ -167,6 +167,11 @@ def main() -> None:
         choices=["docker", "singularity", "local"],
         help="Environment type [default: docker]",
     )
+    swebench_group.add_argument(
+        "--swebench-redo",
+        action="store_true",
+        help="Re-run existing instances instead of skipping them",
+    )
 
     # Import subcommand
     import_parser = subparsers.add_parser("import", help="Import benchmark results into the database")
@@ -352,6 +357,7 @@ def _handle_swebench_run(
         environment=args.swebench_environment,
         run_id=run_id,
         db_path=str(DB_PATH),
+        redo=args.swebench_redo,
     )
 
     # Save the launch script to a file for user convenience
