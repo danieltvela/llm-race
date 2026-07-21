@@ -83,7 +83,7 @@ echo "Workers: {workers}"
 echo "Env:     {environment}"
 echo "=========================================="
 
-# ── Docker environment checks ──────────────────────────────────
+    # ── Docker environment checks ──────────────────────────────────
 if [ "{environment}" = "docker" ]; then
     if ! command -v docker &>/dev/null; then
         echo ""
@@ -97,19 +97,60 @@ if [ "{environment}" = "docker" ]; then
         echo ""
         echo "ERROR: Docker daemon is not running."
         echo ""
-        echo "Start Docker Desktop and re-run this script, or use:"
+        if command -v colima &>/dev/null; then
+            echo "Colima detected. Start it with:"
+            echo "  colima start --arch x86_64"
+            echo "  colima start --arch aarch64 --vm-type vz --vz-rosetta"
+        else
+            echo "Start Docker Desktop and re-run this script."
+        fi
+        echo ""
+        echo "Or skip Docker entirely:"
         echo "  python3 -m llm_race run --benchmark-type swebench --swebench-environment local ..."
         exit 1
     fi
 
-    # Apple Silicon (ARM64) macOS needs platform emulation for x86_64 SWE-bench images.
-    # Without this, Docker will fail with "exec format error" or "no matching manifest".
+    # ── Colima on Apple Silicon ─────────────────────────────────
+    # SWE-bench Docker images are x86_64-only.
+    # Colima must be running an x86_64 VM or ARM64+Rosetta VM.
+    if command -v colima &>/dev/null; then
+        echo ""
+        echo "Colima detected."
+
+        # Check current Colima architecture
+        COLIMA_ARCH=$(colima status 2>/dev/null | grep -o 'arch: [^ ]*' | cut -d' ' -f2 || echo "")
+
+        if [ "$COLIMA_ARCH" = "aarch64" ] || [ -z "$COLIMA_ARCH" ]; then
+            # Check if Rosetta is available (macOS 13+ with VZ)
+            if [ "$(uname -m)" = "arm64" ] && [ -e "/Library/Apple/usr/libexec/oah/libRosettaRuntime" ]; then
+                echo ""
+                echo "WARNING: Colima is running in ARM64 mode, but SWE-bench images are x86_64 only."
+                echo ""
+                echo "Your Colima VM needs x86_64 support. Choose one:"
+                echo ""
+                echo "  Option A (recommended, fast): x86_64 VM"
+                echo "    colima stop"
+                echo "    colima start --arch x86_64"
+                echo ""
+                echo "  Option B (ARM64 + Rosetta):"
+                echo "    colima stop"
+                echo "    colima start --arch aarch64 --vm-type vz --vz-rosetta"
+                echo ""
+                echo "Or use the local environment (no Docker):"
+                echo "  python3 -m llm_race run --benchmark-type swebench --swebench-environment local ..."
+                exit 1
+            fi
+        fi
+    fi
+
+    # Apple Silicon (ARM64) macOS: set platform emulation for x86_64 images.
+    # Docker Desktop handles this with Rosetta; Colima with --arch x86_64.
     UNAME_M=$(uname -m 2>/dev/null || echo "")
     case "$UNAME_M" in
         arm64|aarch64)
             echo ""
             echo "Detected ARM64 architecture (Apple Silicon)."
-            echo "Enabling x86_64 platform emulation for SWE-bench Docker containers..."
+            echo "Setting DOCKER_DEFAULT_PLATFORM=linux/amd64 for x86_64 SWE-bench containers."
             export DOCKER_DEFAULT_PLATFORM=linux/amd64
             ;;
     esac
