@@ -157,3 +157,18 @@ class TestGenerateSwebenchLaunchScript:
             db_path="/tmp/test.db",
         )
         assert "--model meta/llama-3.1-8b" in script
+
+    def test_model_name_with_base_url_uses_openai_prefix(self) -> None:
+        """When base_url is set, model name should use openai/ prefix for vLLM endpoints."""
+        script = generate_swebench_launch_script(
+            model_slug="Qwen/Qwen3.6-27B-FP8/FP8",
+            base_url="http://192.168.1.47:8005/v1",
+            subset="lite",
+            split="dev",
+            workers=1,
+            instances=None,
+            environment="docker",
+            run_id="test-run-id-123",
+            db_path="/tmp/test.db",
+        )
+        assert "--model openai/Qwen3.6-27B-FP8" in script

@@ -36,7 +36,14 @@ def generate_swebench_launch_script(
         A bash script string.
     """
     parsed = parse_slug(model_slug)
-    swebench_model_name = f"{parsed['ai_lab']}/{parsed['name']}"
+    # litellm requires a provider prefix (e.g. openai/, anthropic/).
+    # For local endpoints (vLLM, Ollama, etc.) with a custom base_url,
+    # we use openai/ prefix since they follow the OpenAI API format.
+    # For cloud providers without base_url, {ai_lab}/{name} is the litellm model name.
+    if base_url is not None:
+        swebench_model_name = f"openai/{parsed['name']}"
+    else:
+        swebench_model_name = f"{parsed['ai_lab']}/{parsed['name']}"
     output_dir = f"/tmp/swebench_{run_id[:8]}"
 
     # Build mini-extra swebench command

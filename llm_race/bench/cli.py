@@ -329,10 +329,17 @@ def _handle_swebench_run(
 
     run_id = str(uuid.uuid4())
     parsed = parse_slug(model_slug)
-    swebench_model_name = f"{parsed['ai_lab']}/{parsed['name']}"
 
     # Determine base_url to pass to launch script
     base_url = args.base_url if args.base_url != DEFAULT_BASE_URL else None
+
+    # litellm requires a provider prefix. For local endpoints use openai/ prefix
+    # since vLLM/Ollama follow the OpenAI API format.
+    swebench_model_name = (
+        f"openai/{parsed['name']}"
+        if base_url is not None
+        else f"{parsed['ai_lab']}/{parsed['name']}"
+    )
 
     # Generate launch script
     launch_script_content = generate_swebench_launch_script(
