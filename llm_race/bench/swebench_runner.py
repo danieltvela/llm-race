@@ -65,6 +65,7 @@ def generate_swebench_launch_script(
     if base_url is not None:
         cmd_parts.append("--config swebench.yaml")
         cmd_parts.append(f"--config model.model_kwargs.api_base={base_url}")
+        cmd_parts.append("--config model.model_kwargs.api_key=not-needed")
 
     cmd = " \\\n    ".join(cmd_parts)
 
