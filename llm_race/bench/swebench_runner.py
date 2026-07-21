@@ -69,6 +69,7 @@ set -euo pipefail
 # Model:  {swebench_model_name}
 # Slug:   {model_slug}
 # Subset: {subset} | Split: {split} | Workers: {workers}
+# Env:    {environment}
 # ============================================================
 
 echo "=========================================="
@@ -79,9 +80,45 @@ echo "Model:   {swebench_model_name}"
 echo "Subset:  {subset}"
 echo "Split:   {split}"
 echo "Workers: {workers}"
+echo "Env:     {environment}"
 echo "=========================================="
 
-# Install mini-swe-agent if not already installed
+# ── Docker environment checks ──────────────────────────────────
+if [ "{environment}" = "docker" ]; then
+    if ! command -v docker &>/dev/null; then
+        echo ""
+        echo "ERROR: Docker is not installed."
+        echo "Install Docker Desktop from https://www.docker.com/products/docker-desktop/"
+        echo "Or use --swebench-environment local to run without Docker (less secure)."
+        exit 1
+    fi
+
+    if ! docker info >/dev/null 2>&1; then
+        echo ""
+        echo "ERROR: Docker daemon is not running."
+        echo ""
+        echo "Start Docker Desktop and re-run this script, or use:"
+        echo "  python3 -m llm_race run --benchmark-type swebench --swebench-environment local ..."
+        exit 1
+    fi
+
+    # Apple Silicon (ARM64) macOS needs platform emulation for x86_64 SWE-bench images.
+    # Without this, Docker will fail with "exec format error" or "no matching manifest".
+    UNAME_M=$(uname -m 2>/dev/null || echo "")
+    case "$UNAME_M" in
+        arm64|aarch64)
+            echo ""
+            echo "Detected ARM64 architecture (Apple Silicon)."
+            echo "Enabling x86_64 platform emulation for SWE-bench Docker containers..."
+            export DOCKER_DEFAULT_PLATFORM=linux/amd64
+            ;;
+    esac
+
+    echo ""
+    echo "Docker is ready."
+fi
+
+# ── Install mini-swe-agent ────────────────────────────────────
 if ! python3 -c "import minisweagent" 2>/dev/null; then
     echo ""
     echo "mini-swe-agent not found. Installing..."
@@ -96,10 +133,10 @@ if ! python3 -c "import minisweagent" 2>/dev/null; then
     echo "mini-swe-agent installed."
 fi
 
-# Create output directory
+# ── Create output directory ───────────────────────────────────
 mkdir -p {output_dir}
 
-# Run SWE-bench evaluation
+# ── Run SWE-bench evaluation ──────────────────────────────────
 echo ""
 echo "Starting SWE-bench evaluation..."
 echo ""
@@ -109,7 +146,7 @@ echo ""
 echo ""
 echo "SWE-bench evaluation complete."
 
-# Import results into llm-race database
+# ── Import results into llm-race database ─────────────────────
 echo ""
 echo "Importing results into llm-race database..."
 python3 -m llm_race import --run-id {run_id} --output-dir {output_dir} --db {db_path}

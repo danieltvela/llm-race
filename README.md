@@ -29,7 +29,9 @@ Evaluate model coding ability using [mini-SWE-agent](https://github.com/swe-agen
 ```bash
 # Generate a self-contained launch script
 uv run python -m llm_race run --benchmark-type swebench \
-  --slug "openai/gpt-4o/none" \
+  --slug "Qwen/Qwen3.6-27B-FP8/FP8" \
+  --provider vllm \
+  --base-url http://192.168.1.47:8005/v1 \
   --swebench-subset lite \
   --swebench-split dev \
   --swebench-instances 0:5 \
