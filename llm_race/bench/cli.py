@@ -168,7 +168,11 @@ def main() -> None:
     if model_slug is None:
         if args.slug:
             model_slug = args.slug
-        elif args.ai_lab and args.name and args.quantization:
+        elif args.ai_lab or args.name or args.quantization:
+            # Individual flags provided — all three are required
+            if not (args.ai_lab and args.name and args.quantization):
+                print("Error: --ai-lab, --name, and --quantization must all be specified together.")
+                sys.exit(1)
             model_slug = build_slug(args.ai_lab, args.name, args.quantization, args.extra)
             model_api_name = args.name
         else:
