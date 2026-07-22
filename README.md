@@ -33,12 +33,13 @@ uv run python -m llm_race run --benchmark-type swebench \
   --provider vllm \
   --base-url http://192.168.1.47:8005/v1 \
   --swebench-split test \
-  --swebench-workers 2 \
+  --swebench-workers 4 \
   --swebench-subset multilingual \
-  --swebench-instances all
+  --swebench-filter "rust|cargo|tokio|serde|actix|iced" \
+  --swebench-instances 0:20
 
 # Use "--swebench-subset multilingual" because it uses different languages like Rust, js, etc.
-# Use --swebench-instances 0:9 for a subset of tests
+# Use --swebench-instances 0:9 for a subset of tests, ser "all" for all tests.
 
 # Execute the generated script (installs mini-swe-agent if needed, runs benchmark, imports results)
 bash launch_swebench_*.sh
